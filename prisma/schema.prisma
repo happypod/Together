@@ -1,0 +1,530 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ANCHOR_ADMIN
+  COUNCIL_OPERATOR
+  LINKER
+  TAXI_PARTNER
+  VIEWER
+}
+
+enum MobilityPurpose {
+  HOSPITAL
+  PHARMACY
+  MARKET
+  PUBLIC_OFFICE
+  FINANCE
+  POST_OFFICE
+  OTHER
+}
+
+enum MobilityStatus {
+  REQUESTED
+  RECRUITING
+  GROUP_READY
+  LINKER_RECRUITING
+  LINKER_ASSIGNED
+  TAXI_REQUESTED
+  TAXI_CONFIRMED
+  IN_PROGRESS
+  RETURN_CONFIRMED
+  SETTLED
+  REPORTED
+  CANCELED_BY_RESIDENT
+  CANCELED_BY_OPERATOR
+  CANCELED_BY_TAXI
+  CANCELED_BY_WEATHER
+  CANCELED_BY_OTHER
+  INCIDENT_REPORTED
+  COMPLAINT_REPORTED
+  NO_SHOW
+  PARTIAL_COMPLETED
+}
+
+enum LinkerStatus {
+  CANDIDATE
+  IN_TRAINING
+  TRAINING_COMPLETED
+  FIELD_PRACTICE_COMPLETED
+  AVAILABLE
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum GroupMemberStatus {
+  ACTIVE
+  CANCELED
+  NO_SHOW
+}
+
+enum SettlementMode {
+  PILOT
+  SELF_RELIANCE
+  COMMUNITY_SUPPORT
+  CUSTOM
+}
+
+enum RoundingPolicy {
+  ROUND
+  FLOOR
+  CEIL
+  MANUAL
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  SOFT_DELETE
+  STATUS_CHANGE
+  ASSIGN
+  UNASSIGN
+  EXPORT_CSV
+  UPLOAD_FILE
+  LOGIN
+  LOGOUT
+  TOKEN_CREATE
+  TOKEN_SUBMIT
+  TOKEN_REVOKE
+  SETTLEMENT_LOCK
+  SETTLEMENT_UNLOCK
+}
+
+enum MobileTokenScope {
+  REQUEST_INTAKE
+  TRIP_CHECK
+  RETURN_CONFIRM
+  SURVEY_SUBMIT
+  TAXI_CONFIRM
+}
+
+enum ContactType {
+  RESIDENT_CALL
+  GUARDIAN_CALL
+  LINKER_CALL
+  TAXI_PARTNER_CALL
+  ON_SITE
+  SMS_MANUAL
+  OTHER
+}
+
+enum IncidentType {
+  INCIDENT
+  COMPLAINT
+  LOST_ITEM
+  DELAY
+  RETURN_ISSUE
+  OTHER
+}
+
+enum CommunityFundType {
+  CONTRIBUTION
+  SUPPORT_RECORD
+}
+
+enum FileType {
+  RECEIPT
+  CONSENT
+  OTHER
+}
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  email          String?   @unique
+  phone          String?
+  passwordHash   String?
+  role           UserRole
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  createdRequests MobilityRequest[] @relation("RequestCreatedBy")
+  createdGroups   MobilityGroup[]   @relation("GroupCreatedBy")
+  createdTripLogs TripLog[]         @relation("TripLogCreatedBy")
+  reportedIncidents IncidentReport[] @relation("IncidentReportedBy")
+  uploadedFiles   FileAttachment[]  @relation("FileUploadedBy")
+  createdMobileTokens MobileFormToken[] @relation("MobileTokenCreatedBy")
+  updatedSettings AppSetting[]      @relation("SettingUpdatedBy")
+  createdContacts ContactLog[]      @relation("ContactCreatedBy")
+  auditLogs       AuditLog[]
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model Resident {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  villageName    String
+  phone          String
+  guardianPhone  String?
+  memo           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  requests       MobilityRequest[]
+  groupMembers   MobilityGroupMember[]
+  surveys        SatisfactionSurvey[]
+
+  @@index([villageName])
+  @@index([phone])
+  @@index([deletedAt])
+}
+
+model MobilityRequest {
+  id                          String          @id @default(uuid()) @db.Uuid
+  residentId                  String          @db.Uuid
+  desiredDate                 DateTime        @db.Date
+  desiredTimeWindow           String
+  purpose                     MobilityPurpose
+  origin                      String
+  destination                 String
+  needsCompanion              Boolean         @default(true)
+  notes                       String?
+  status                      MobilityStatus  @default(REQUESTED)
+  privacyConsent              Boolean         @default(false)
+  thirdPartyConsent           Boolean         @default(false)
+  sensitiveInfoNotCollected   Boolean         @default(false)
+  createdByUserId             String          @db.Uuid
+  createdAt                   DateTime        @default(now())
+  updatedAt                   DateTime        @updatedAt
+  deletedAt                   DateTime?
+
+  resident                    Resident        @relation(fields: [residentId], references: [id])
+  createdBy                   User            @relation("RequestCreatedBy", fields: [createdByUserId], references: [id])
+  groupMembers                MobilityGroupMember[]
+
+  @@index([residentId])
+  @@index([desiredDate])
+  @@index([status])
+  @@index([createdByUserId])
+  @@index([deletedAt])
+}
+
+model MobilityGroup {
+  id                  String          @id @default(uuid()) @db.Uuid
+  groupName           String
+  serviceDate         DateTime        @db.Date
+  timeWindow          String
+  destinationSummary  String
+  returnEta           DateTime?
+  linkerId            String?         @db.Uuid
+  status              MobilityStatus  @default(RECRUITING)
+  exceptionReason     String?
+  notes               String?
+  createdByUserId     String          @db.Uuid
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  deletedAt           DateTime?
+
+  linker              Linker?         @relation(fields: [linkerId], references: [id])
+  createdBy           User            @relation("GroupCreatedBy", fields: [createdByUserId], references: [id])
+  members             MobilityGroupMember[]
+  taxiReservation     TaxiReservation?
+  tripLogs            TripLog[]
+  settlement          Settlement?
+  surveys             SatisfactionSurvey[]
+  incidentReports     IncidentReport[]
+  communityFunds      CommunityFund[]
+
+  @@index([serviceDate])
+  @@index([status])
+  @@index([linkerId])
+  @@index([createdByUserId])
+  @@index([deletedAt])
+}
+
+model MobilityGroupMember {
+  id                  String            @id @default(uuid()) @db.Uuid
+  groupId             String            @db.Uuid
+  requestId           String            @db.Uuid
+  residentId          String            @db.Uuid
+  pickupOrder         Int
+  pickupEta           DateTime?
+  pickupPlace         String
+  returnConfirmedAt   DateTime?
+  memberStatus        GroupMemberStatus @default(ACTIVE)
+
+  group               MobilityGroup     @relation(fields: [groupId], references: [id])
+  request             MobilityRequest   @relation(fields: [requestId], references: [id])
+  resident            Resident          @relation(fields: [residentId], references: [id])
+
+  @@unique([groupId, pickupOrder])
+  @@unique([requestId])
+  @@index([groupId])
+  @@index([residentId])
+  @@index([memberStatus])
+}
+
+model Linker {
+  id                         String       @id @default(uuid()) @db.Uuid
+  name                       String
+  villageName                String
+  phone                      String
+  availableDays              String[]
+  availableTimeWindows       String[]
+  trainingCompleted          Boolean      @default(false)
+  fieldPracticeCompleted     Boolean      @default(false)
+  privacyPledgeSigned        Boolean      @default(false)
+  insuranceRegistered        Boolean      @default(false)
+  status                     LinkerStatus @default(CANDIDATE)
+  activityCount              Int          @default(0)
+  incidentComplaintHistory   String?
+  wantsJobConnection         Boolean      @default(false)
+  desiredJobField            String?
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+  deletedAt                  DateTime?
+
+  groups                     MobilityGroup[]
+
+  @@index([villageName])
+  @@index([phone])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model TaxiReservation {
+  id                      String        @id @default(uuid()) @db.Uuid
+  groupId                 String        @unique @db.Uuid
+  requestedAt             DateTime      @default(now())
+  partnerManagerName      String?
+  reservationConfirmed    Boolean       @default(false)
+  confirmedAt             DateTime?
+  vehicleNumber           String?
+  driverPhone             String?
+  expectedFare            Int?
+  actualFare              Int?
+  receiptAttached         Boolean       @default(false)
+  receiptUrl              String?
+  notes                   String?
+
+  group                   MobilityGroup @relation(fields: [groupId], references: [id])
+}
+
+model TripLog {
+  id                       String         @id @default(uuid()) @db.Uuid
+  groupId                  String         @db.Uuid
+  status                   MobilityStatus
+  linkerBoardedAt          DateTime?
+  resident1BoardedAt       DateTime?
+  resident2BoardedAt       DateTime?
+  resident3BoardedAt       DateTime?
+  arrivedAtDestination     DateTime?
+  serviceTaskConfirmed     Boolean        @default(false)
+  returnStartedAt          DateTime?
+  allReturnsConfirmedAt    DateTime?
+  notes                    String?
+  createdByUserId          String         @db.Uuid
+  createdAt                DateTime       @default(now())
+
+  group                    MobilityGroup  @relation(fields: [groupId], references: [id])
+  createdBy                User           @relation("TripLogCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([groupId])
+  @@index([status])
+  @@index([createdByUserId])
+}
+
+model Settlement {
+  id                          String          @id @default(uuid()) @db.Uuid
+  groupId                     String          @unique @db.Uuid
+  settlementMode              SettlementMode  @default(PILOT)
+  roundingPolicy              RoundingPolicy  @default(FLOOR)
+  totalFare                   Int
+  residentCount               Int
+  residentTotalShare          Int
+  residentPerPersonShare      Int
+  anchorSupportAmount         Int
+  linkerActivityFee           Int?
+  communityFundSupportAmount  Int?
+  receiptUrl                  String?
+  isSettled                   Boolean         @default(false)
+  settledAt                   DateTime?
+  lockedAt                    DateTime?
+  updatedReason               String?
+
+  group                       MobilityGroup   @relation(fields: [groupId], references: [id])
+
+  @@index([isSettled])
+  @@index([settledAt])
+}
+
+model SatisfactionSurvey {
+  id                   String        @id @default(uuid()) @db.Uuid
+  groupId              String        @db.Uuid
+  residentId           String?       @db.Uuid
+  userSatisfaction     Int
+  linkerSatisfaction   Int
+  taxiSatisfaction     Int
+  costBurdenFeeling    Int
+  reuseIntent          Int
+  inconvenience        String?
+  improvementRequest   String?
+  hasIncident          Boolean       @default(false)
+  hasComplaint         Boolean       @default(false)
+  issueTypes           String[]
+  createdAt            DateTime      @default(now())
+
+  group                MobilityGroup @relation(fields: [groupId], references: [id])
+  resident             Resident?     @relation(fields: [residentId], references: [id])
+
+  @@index([groupId])
+  @@index([residentId])
+  @@index([createdAt])
+}
+
+model IncidentReport {
+  id                 String        @id @default(uuid()) @db.Uuid
+  groupId            String        @db.Uuid
+  incidentType       IncidentType
+  occurredAt         DateTime?
+  description        String
+  actionTaken        String?
+  reportedByUserId   String        @db.Uuid
+  createdAt          DateTime      @default(now())
+
+  group              MobilityGroup @relation(fields: [groupId], references: [id])
+  reportedBy         User          @relation("IncidentReportedBy", fields: [reportedByUserId], references: [id])
+
+  @@index([groupId])
+  @@index([incidentType])
+  @@index([reportedByUserId])
+}
+
+model CommunityFund {
+  id          String             @id @default(uuid()) @db.Uuid
+  groupId     String?            @db.Uuid
+  month       String
+  amount      Int
+  fundType    CommunityFundType
+  source      String
+  note        String?
+  createdAt   DateTime           @default(now())
+
+  group       MobilityGroup?     @relation(fields: [groupId], references: [id])
+
+  @@index([month])
+  @@index([fundType])
+  @@index([groupId])
+}
+
+model MonthlyReport {
+  id                        String   @id @default(uuid()) @db.Uuid
+  month                     String   @unique
+  tripCount                 Int      @default(0)
+  monthlyResidentCount      Int      @default(0)
+  cumulativeResidentCount   Int      @default(0)
+  linkerActivityCount       Int      @default(0)
+  activeLinkerCount         Int      @default(0)
+  averageFare               Int      @default(0)
+  totalAnchorSupport        Int      @default(0)
+  averageResidentShare      Int      @default(0)
+  estimatedSaving           Int      @default(0)
+  satisfactionAverage       Float    @default(0)
+  incidentComplaintCount    Int      @default(0)
+  communityFundAmount       Int      @default(0)
+  jobConsultationCount      Int      @default(0)
+  mouCount                  Int      @default(0)
+  generatedAt               DateTime @default(now())
+}
+
+model AuditLog {
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @db.Uuid
+  action         AuditAction
+  targetType     String
+  targetId       String      @db.Uuid
+  beforeValue    Json?
+  afterValue     Json?
+  performedAt    DateTime    @default(now())
+  accessContext  String?
+  note           String?
+
+  user           User        @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([performedAt])
+}
+
+model FileAttachment {
+  id                 String    @id @default(uuid()) @db.Uuid
+  targetType         String
+  targetId           String    @db.Uuid
+  fileType           FileType
+  fileName           String
+  mimeType           String
+  sizeBytes          Int
+  url                String
+  uploadedByUserId   String    @db.Uuid
+  createdAt          DateTime  @default(now())
+
+  uploadedBy         User      @relation("FileUploadedBy", fields: [uploadedByUserId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([fileType])
+  @@index([uploadedByUserId])
+}
+
+model MobileFormToken {
+  id                String           @id @default(uuid()) @db.Uuid
+  tokenHash         String           @unique
+  scope             MobileTokenScope
+  targetType        String
+  targetId          String           @db.Uuid
+  expiresAt         DateTime
+  maxUseCount       Int              @default(1)
+  usedCount         Int              @default(0)
+  revokedAt         DateTime?
+  createdByUserId   String           @db.Uuid
+  createdAt         DateTime         @default(now())
+
+  createdBy         User             @relation("MobileTokenCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([scope])
+  @@index([targetType, targetId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+model AppSetting {
+  key              String    @id
+  value            Json
+  description      String?
+  updatedByUserId  String?   @db.Uuid
+  updatedAt        DateTime  @updatedAt
+
+  updatedBy        User?     @relation("SettingUpdatedBy", fields: [updatedByUserId], references: [id])
+}
+
+model ContactLog {
+  id                String      @id @default(uuid()) @db.Uuid
+  targetType        String
+  targetId          String      @db.Uuid
+  contactType       ContactType
+  contactedAt       DateTime
+  summary           String
+  createdByUserId   String      @db.Uuid
+  createdAt         DateTime    @default(now())
+
+  createdBy         User        @relation("ContactCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([contactType])
+  @@index([contactedAt])
+  @@index([createdByUserId])
+}

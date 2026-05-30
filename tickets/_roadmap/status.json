@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-05-30",
+  "project": {
+    "officialName": "백천만 동행이동 OS",
+    "publicName": "백천만 동행택시",
+    "type": "공동예약형 생활이동 및 동행링커 운영관리 시스템",
+    "mvpScope": "관리자 웹 중심 MVP, 모바일 링크형 입력폼 보조"
+  },
+  "workspace": {
+    "root": "F:\\moalab\\Together",
+    "repoStatus": "no_git_repository_detected",
+    "implementationStatus": "t005_linker_taxi_trip_flow_completed_without_db_commit"
+  },
+  "integrationValidation": {
+    "updatedAt": "2026-05-30",
+    "scope": "T-003 resident request flow and T-004 group operation flow",
+    "result": "passed_without_db_commit",
+    "passed": [
+      "typecheck",
+      "lint",
+      "prisma schema validate",
+      "seed syntax check",
+      "production build",
+      "localhost HTTP 200 for /, /admin/requests, /admin/groups",
+      "headless Chrome mobile and desktop screenshots for /admin/requests and /admin/groups"
+    ],
+    "blocked": [
+      ".env file is missing",
+      "DATABASE_URL and NEXTAUTH_SECRET are not set in the current shell",
+      "localhost:5432 PostgreSQL connection failed"
+    ],
+    "nextRequired": "Provide a migrated PostgreSQL integration database and DATABASE_URL, then run DB commit verification for request creation, grouping, member changes, status transitions, and AuditLog persistence."
+  },
+  "sourceSpec": {
+    "title": "백천만 동행이동 OS MVP 설계문서",
+    "date": "2026-05-30",
+    "attachment": "C:\\Users\\happy\\.codex\\attachments\\839431a2-5b9e-45bd-8850-8aa6627ecc66\\pasted-text.txt"
+  },
+  "currentStage": "settlement_audit_dashboard_ready",
+  "activeTicket": "T-006",
+  "nextTickets": [
+    "T-061",
+    "T-062",
+    "T-063"
+  ],
+  "counts": {
+    "planned": 23,
+    "ready": 1,
+    "in_progress": 0,
+    "blocked": 0,
+    "review": 0,
+    "done": 7
+  },
+  "phases": [
+    {
+      "id": "phase-0",
+      "name": "Preflight",
+      "status": "completed",
+      "focus": "티켓, 로드맵, 용어, 상태값, 권한 기반 구성"
+    },
+    {
+      "id": "phase-1",
+      "name": "Foundation",
+      "status": "completed",
+      "focus": "프로젝트 초기 세팅, 레이아웃, 모델, RBAC, AuditLog"
+    },
+    {
+      "id": "phase-2",
+      "name": "Core Data",
+      "status": "in_progress",
+      "focus": "주민, 이동 신청, 동행링커, 택시예약 기본 데이터"
+    },
+    {
+      "id": "phase-3",
+      "name": "Group Operation",
+      "status": "completed",
+      "focus": "공동예약 그룹, 멤버, 픽업 순서, 링커 배정"
+    },
+    {
+      "id": "phase-4",
+      "name": "Trip Operation",
+      "status": "completed",
+      "focus": "택시요청, 운행상태, 귀가확인, 특이사항"
+    },
+    {
+      "id": "phase-5",
+      "name": "Settlement",
+      "status": "in_progress",
+      "focus": "요금, 주민 1/N 분담, 앵커 지원, 영수증"
+    },
+    {
+      "id": "phase-6",
+      "name": "Reporting",
+      "status": "planned",
+      "focus": "대시보드, 월간 리포트, CSV"
+    },
+    {
+      "id": "phase-7",
+      "name": "QA",
+      "status": "planned",
+      "focus": "개인정보, 권한, 상태전이, 정산, 제외 기능 검증"
+    }
+  ],
+  "guardrails": [
+    "MVP는 내부 운영관리 시스템으로 구현한다.",
+    "공개 앱스토어 앱, 자동 차량 배정, 자동 결제, 실시간 위치 추적은 구현하지 않는다.",
+    "건강 민감정보와 고유식별정보는 수집하지 않는다.",
+    "목록 화면에서는 연락처 마스킹을 적용한다.",
+    "상태 변경, 정산 수정, CSV 내보내기, 주요 생성과 수정은 AuditLog를 남긴다.",
+    "모든 작업은 사전설계, 정합성, 구현, 검증 순서로 진행한다.",
+    "모바일 우선 설계를 기본으로 하고 360px, 390px, 768px, 1280px 이상에서 반응형을 검증한다.",
+    "작업지시서는 표준 포맷을 사용하고 Product/PM, Data, Backend, Frontend, QA, Ops 지시를 분리한다.",
+    "모든 UI는 고령 사용자를 고려해 밝고 가독성이 높으며 명확한 화면 구성을 우선한다."
+  ],
+  "openDecisions": []
+}

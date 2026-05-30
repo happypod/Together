@@ -1,0 +1,12 @@
+node_modules
+.next
+.pnpm-store
+out
+dist
+coverage
+.verification
+*.tsbuildinfo
+.next-dev.*.log
+.env
+.env*.local
+!.env.example
