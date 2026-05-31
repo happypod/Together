@@ -29,8 +29,7 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
   }
 }
 
-const shortcutGuide: { keys: string; desc: string }[] = [
-  { keys: `Alt + 1 ~ ${navigationItems.length}`, desc: "상단 메뉴로 바로 이동" },
+const preferenceShortcutGuide: { keys: string; desc: string }[] = [
   { keys: "Alt + +", desc: "글자 크게" },
   { keys: "Alt + -", desc: "글자 작게" },
   { keys: "Alt + 0", desc: "글자 크기·대비 기본값" },
@@ -40,8 +39,20 @@ const shortcutGuide: { keys: string; desc: string }[] = [
   { keys: "Esc", desc: "열린 창 닫기" },
 ];
 
-export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
+type AppChromeProps = {
+  currentHref?: string;
+  mode?: "admin" | "public";
+};
+
+export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps) {
   const router = useRouter();
+  const showNavigationShortcuts = mode === "admin";
+  const shortcutGuide = showNavigationShortcuts
+    ? [
+        { keys: `Alt + 1 ~ ${navigationItems.length}`, desc: "상단 메뉴로 바로 이동" },
+        ...preferenceShortcutGuide,
+      ]
+    : preferenceShortcutGuide;
   const [fontScale, setFontScaleState] = useState<FontScale>("normal");
   const [contrast, setContrastState] = useState<Contrast>("normal");
   const [helpOpen, setHelpOpen] = useState(false);
@@ -135,10 +146,12 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
 
       if (event.altKey && !event.ctrlKey && !event.metaKey) {
         if (/^[1-9]$/.test(event.key)) {
-          const item = navigationItems.find((nav) => nav.hotkey === event.key);
-          if (item) {
-            event.preventDefault();
-            router.push(item.href);
+          if (showNavigationShortcuts) {
+            const item = navigationItems.find((nav) => nav.hotkey === event.key);
+            if (item) {
+              event.preventDefault();
+              router.push(item.href);
+            }
           }
           return;
         }
@@ -183,7 +196,15 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [applyContrast, closeSettings, focusMain, resetPreferences, router, stepFont]);
+  }, [
+    applyContrast,
+    closeSettings,
+    focusMain,
+    resetPreferences,
+    router,
+    showNavigationShortcuts,
+    stepFont,
+  ]);
 
   // 모달 포커스 관리
   useEffect(() => {
@@ -195,7 +216,9 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
     }
   }, [helpOpen]);
 
-  const activeItem = navigationItems.find((item) => item.href === currentHref);
+  const activeItem = showNavigationShortcuts
+    ? navigationItems.find((item) => item.href === currentHref)
+    : undefined;
 
   function renderSettingsControls() {
     return (
@@ -259,12 +282,8 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
 
   return (
     <>
-      <div className="a11y-toolbar a11y-toolbar-desktop" role="group" aria-label="화면 보기 설정">
-        {renderSettingsControls()}
-      </div>
-
       <details
-        className="mobile-settings"
+        className={`mobile-settings app-settings app-settings--${mode}`}
         onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
         ref={settingsDetailsRef}
       >
@@ -275,7 +294,7 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
           className="mobile-settings-trigger"
           title="화면 설정"
         >
-          <FaIcon name="filter" />
+          <FaIcon name="sliders" />
         </summary>
         <div
           className="mobile-settings-layer"
@@ -338,7 +357,9 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
               </button>
             </div>
             <p className="modal-lead">
-              {activeItem ? `현재 화면: ${activeItem.label}` : "현재 화면을 확인하세요."}
+              {activeItem
+                ? `현재 화면: ${activeItem.label}`
+                : "글자 크기와 화면 대비를 조정할 수 있습니다."}
             </p>
             <dl className="shortcut-list">
               {shortcutGuide.map((row) => (
@@ -350,19 +371,21 @@ export function AppChrome({ currentHref = "/" }: { currentHref?: string }) {
                 </div>
               ))}
             </dl>
-            <div className="shortcut-nav">
-              <p className="form-help">메뉴 바로가기</p>
-              <ul>
-                {navigationItems.map((item) => (
-                  <li key={item.href}>
-                    <kbd>Alt + {item.hotkey}</kbd>
-                    <span>
-                      <FaIcon name={item.icon} /> {item.label}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {showNavigationShortcuts ? (
+              <div className="shortcut-nav">
+                <p className="form-help">메뉴 바로가기</p>
+                <ul>
+                  {navigationItems.map((item) => (
+                    <li key={item.href}>
+                      <kbd>Alt + {item.hotkey}</kbd>
+                      <span>
+                        <FaIcon name={item.icon} /> {item.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

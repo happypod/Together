@@ -139,6 +139,24 @@ enum NoticeType {
   PRIVACY
 }
 
+enum EducationCourseType {
+  COLLECTIVE
+  LINKER_QUALIFICATION
+}
+
+enum EducationParticipantType {
+  RESIDENT
+  COMPANION
+  LINKER
+}
+
+enum EducationApplicationStatus {
+  RECEIVED
+  CONFIRMED
+  COMPLETED
+  CANCELED
+}
+
 enum PublicFeedbackSource {
   RESIDENT
   GUARDIAN
@@ -195,6 +213,7 @@ model User {
   createdMouRecords MouRecord[]     @relation("MouRecordCreatedBy")
   auditLogs       AuditLog[]
   createdNotices  Notice[]          @relation("NoticeCreatedBy")
+  handledEducationApplications EducationApplication[] @relation("EducationApplicationHandledBy")
   approvedFeedbacks PublicFeedback[] @relation("FeedbackApprovedBy")
 
   @@index([role])
@@ -640,6 +659,34 @@ model Notice {
   @@index([createdAt])
 }
 
+model EducationApplication {
+  id                     String                     @id @default(uuid()) @db.Uuid
+  receiptCode            String                     @unique
+  participantName        String
+  phone                  String
+  villageName            String?
+  participantType         EducationParticipantType
+  courseType             EducationCourseType
+  preferredDate          DateTime                   @db.Date
+  notes                  String?
+  privacyConsent         Boolean                    @default(true)
+  educationRuleConfirmed Boolean                    @default(true)
+  status                 EducationApplicationStatus @default(RECEIVED)
+  operatorMemo           String?
+  handledByUserId        String?                    @db.Uuid
+  handledAt              DateTime?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+
+  handledBy              User?                      @relation("EducationApplicationHandledBy", fields: [handledByUserId], references: [id])
+
+  @@index([status])
+  @@index([courseType])
+  @@index([preferredDate])
+  @@index([createdAt])
+  @@index([handledByUserId])
+}
+
 model PublicFeedback {
   id               String               @id @default(uuid()) @db.Uuid
   sourceType       PublicFeedbackSource
@@ -659,4 +706,3 @@ model PublicFeedback {
   @@index([sourceType])
   @@index([createdAt])
 }
-

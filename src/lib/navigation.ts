@@ -8,6 +8,7 @@ export const navigationItems = [
   { label: "동행링커", href: "/admin/trips", icon: "car", hotkey: "5" },
   { label: "정산", href: "/admin/settlements", icon: "receipt", hotkey: "6" },
   { label: "리포트", href: "/admin/reports", icon: "report", hotkey: "7" },
+  { label: "공개홈", href: "/admin/public-content", icon: "home", hotkey: "8" },
 ] as const satisfies readonly {
   label: string;
   href: string;

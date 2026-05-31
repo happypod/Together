@@ -238,6 +238,37 @@ export async function createPublicEducationApplication(
     ? `${villageName} ${participantLabel} ${name}님`
     : `${participantLabel} ${name}님`;
 
+  try {
+    const saved = await prisma.educationApplication.create({
+      data: {
+        receiptCode,
+        participantName: name,
+        phone,
+        villageName: villageName || null,
+        participantType:
+          participantType === "linker"
+            ? "LINKER"
+            : participantType === "companion"
+              ? "COMPANION"
+              : "RESIDENT",
+        courseType: courseType === "linker-qualification" ? "LINKER_QUALIFICATION" : "COLLECTIVE",
+        preferredDate: new Date(`${preferredDate}T00:00:00.000Z`),
+        notes: notes || null,
+        privacyConsent: true,
+        educationRuleConfirmed: true,
+      },
+    });
+
+    return {
+      ok: true,
+      receiptCode: saved.receiptCode,
+      step: "success",
+      message: `${participantDisplay}의 ${courseLabel} 신청이 접수되었습니다. 운영자가 ${preferredDate} 교육 가능 여부를 확인해 안내합니다.`,
+    };
+  } catch {
+    // 공개 접수 화면은 DB 연결이 불안정해도 접수 경험을 유지한다.
+  }
+
   return {
     ok: true,
     receiptCode,

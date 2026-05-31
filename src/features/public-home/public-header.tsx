@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppChrome } from "@/components/layout/app-chrome";
 import { PublicLoginButton } from "@/features/public-home/public-login-button";
 import { publicMenuItems, type PublicMenuId } from "@/features/public-home/public-menu";
 
@@ -31,6 +32,7 @@ export function PublicHeader({ activeMenuId }: PublicHeaderProps) {
             </Link>
           ))}
         </nav>
+        <AppChrome mode="public" />
         <PublicLoginButton />
       </div>
     </header>

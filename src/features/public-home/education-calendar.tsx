@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export type EducationScheduleItem = {
   id: string;
@@ -54,27 +54,48 @@ function dateKey(year: number, month: number, day: number) {
 function parseYear(key: string) { return Number(key.slice(0, 4)); }
 function parseMonth(key: string) { return Number(key.slice(5, 7)); }
 
+function todayKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function monthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
 export function EducationCalendar({ schedules, applyAnchor = "#education-apply-title" }: EducationCalendarProps) {
-  // 첫 교육이 있는 달을 기본 달로 설정한다.
-  const firstDate = schedules.length > 0 ? schedules[0]!.date : new Date().toISOString().slice(0, 10);
-  const [year, setYear] = useState(parseYear(firstDate));
-  const [month, setMonth] = useState(parseMonth(firstDate));
+  // 현재 달에 일정이 있으면 현재 달, 아니면 다음 교육 달을 기본으로 설정한다.
+  const orderedSchedules = useMemo(
+    () => [...schedules].sort((a, b) => a.date.localeCompare(b.date)),
+    [schedules],
+  );
+  const allMonths = useMemo(
+    () => [...new Set(orderedSchedules.map((s) => s.date.slice(0, 7)))].sort(),
+    [orderedSchedules],
+  );
+  const currentDateKey = todayKey();
+  const currentMonthKey = currentDateKey.slice(0, 7);
+  const nextScheduleDate = orderedSchedules.find((s) => s.date >= currentDateKey)?.date;
+  const initialDate = allMonths.includes(currentMonthKey)
+    ? currentDateKey
+    : (nextScheduleDate ?? orderedSchedules[0]?.date ?? currentDateKey);
+  const [year, setYear] = useState(parseYear(initialDate));
+  const [month, setMonth] = useState(parseMonth(initialDate));
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   // 날짜 → 교육 목록 맵
   const byDate: Record<string, EducationScheduleItem[]> = {};
-  for (const s of schedules) {
+  for (const s of orderedSchedules) {
     if (!byDate[s.date]) byDate[s.date] = [];
     byDate[s.date]!.push(s);
   }
 
   // 현재 달에 교육이 있는 달 범위 계산 (prev/next 버튼 비활성화 기준)
-  const allMonths = [...new Set(schedules.map((s) => s.date.slice(0, 7)))].sort();
-  const firstMonth = allMonths[0] ?? `${year}-${String(month).padStart(2, "0")}`;
+  const firstMonth = allMonths[0] ?? monthKey(year, month);
   const lastMonth = allMonths[allMonths.length - 1] ?? firstMonth;
-  const currentMonthKey = `${year}-${String(month).padStart(2, "0")}`;
-  const canPrev = currentMonthKey > firstMonth;
-  const canNext = currentMonthKey < lastMonth;
+  const visibleMonthKey = monthKey(year, month);
+  const canPrev = visibleMonthKey > firstMonth;
+  const canNext = visibleMonthKey < lastMonth;
 
   function prevMonth() {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
@@ -88,7 +109,7 @@ export function EducationCalendar({ schedules, applyAnchor = "#education-apply-t
   }
 
   const cells = buildMonthCells(year, month);
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayDateKey = currentDateKey;
   const selectedSchedules = selectedKey ? (byDate[selectedKey] ?? []) : [];
 
   return (
@@ -139,7 +160,7 @@ export function EducationCalendar({ schedules, applyAnchor = "#education-apply-t
           }
           const key = dateKey(year, month, day);
           const items = byDate[key] ?? [];
-          const isToday = key === todayKey;
+          const isToday = key === todayDateKey;
           const isSelected = key === selectedKey;
           const hasEvent = items.length > 0;
           const colIdx = idx % 7;
@@ -158,7 +179,6 @@ export function EducationCalendar({ schedules, applyAnchor = "#education-apply-t
                   tones[0] ? `edu-cal-cell--${tones[0]}` : "",
                 colIdx === 0 ? "edu-cal-cell--sun" : colIdx === 6 ? "edu-cal-cell--sat" : "",
               ].filter(Boolean).join(" ")}
-              disabled={!hasEvent}
               key={key}
               onClick={() => setSelectedKey(isSelected ? null : key)}
               type="button"
@@ -180,14 +200,14 @@ export function EducationCalendar({ schedules, applyAnchor = "#education-apply-t
       </div>
 
       {/* ── 선택 날짜 상세 ── */}
-      {selectedKey && selectedSchedules.length > 0 ? (
+      {selectedKey ? (
         <div
           className="edu-cal-detail"
           role="region"
           aria-label={`${selectedKey} 교육 일정`}
           aria-live="polite"
         >
-          {selectedSchedules.map((s) => {
+          {selectedSchedules.length > 0 ? selectedSchedules.map((s) => {
             const tone = COURSE_TONE[s.courseType];
             const canApply = s.status === "접수 중" || s.status === "사전 신청";
             return (
@@ -222,7 +242,12 @@ export function EducationCalendar({ schedules, applyAnchor = "#education-apply-t
                 ) : null}
               </div>
             );
-          })}
+          }) : (
+            <div className="edu-cal-empty-detail" role="status">
+              <strong>{selectedKey}</strong>
+              <p>선택한 날짜에는 등록된 교육 일정이 없습니다.</p>
+            </div>
+          )}
         </div>
       ) : null}
 

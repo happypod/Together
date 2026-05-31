@@ -12,7 +12,8 @@ export type AdminRouteId =
   | "calendar"
   | "trips"
   | "settlements"
-  | "reports";
+  | "reports"
+  | "publicContent";
 
 export type ProtectedActionId =
   | "createResidentRequest"
@@ -99,6 +100,12 @@ export const ADMIN_ROUTE_ACCESS_RULES = [
     label: "리포트",
     href: "/admin/reports",
     anyPermission: ["report:read"],
+  },
+  {
+    id: "publicContent",
+    label: "공개 홈",
+    href: "/admin/public-content",
+    anyPermission: ["setting:manage", "request:read"],
   },
 ] satisfies readonly RouteAccessRule[];
 

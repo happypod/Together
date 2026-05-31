@@ -51,7 +51,7 @@ export function PublicHomeTabs({ feedbacks }: PublicHomeTabsProps) {
           {tabItems.map((tab) => (
             <button
               aria-controls={`home-tab-panel-${tab.id}`}
-              aria-selected={activeTab === tab.id}
+              aria-selected={activeTab === tab.id ? "true" : "false"}
               className="pub-home-tab"
               id={`home-tab-${tab.id}`}
               key={tab.id}

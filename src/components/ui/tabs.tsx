@@ -68,7 +68,7 @@ export function Tabs({ tabs, ariaLabel, defaultTabId }: TabsProps) {
           return (
             <button
               aria-controls={`${baseId}-panel-${tab.id}`}
-              aria-selected={selected}
+              aria-selected={selected ? "true" : "false"}
               className="tab-trigger"
               id={`${baseId}-tab-${tab.id}`}
               key={tab.id}
