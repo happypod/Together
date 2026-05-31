@@ -44,12 +44,24 @@ type AppChromeProps = {
   mode?: "admin" | "public";
 };
 
+function formatNavigationShortcutKeys() {
+  const digitKeys = navigationItems
+    .map((item) => item.hotkey)
+    .filter((key) => /^[1-9]$/.test(key));
+  const letterKeys = navigationItems
+    .map((item) => item.hotkey)
+    .filter((key) => /^[a-z]$/i.test(key))
+    .map((key) => `Alt + ${key.toUpperCase()}`);
+
+  return [`Alt + ${digitKeys[0]} ~ ${digitKeys[digitKeys.length - 1]}`, ...letterKeys].join(", ");
+}
+
 export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps) {
   const router = useRouter();
   const showNavigationShortcuts = mode === "admin";
   const shortcutGuide = showNavigationShortcuts
     ? [
-        { keys: `Alt + 1 ~ ${navigationItems.length}`, desc: "상단 메뉴로 바로 이동" },
+        { keys: formatNavigationShortcutKeys(), desc: "상단 메뉴로 바로 이동" },
         ...preferenceShortcutGuide,
       ]
     : preferenceShortcutGuide;
@@ -155,6 +167,14 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
           }
           return;
         }
+        const shortcutItem = showNavigationShortcuts
+          ? navigationItems.find((nav) => nav.hotkey.toLowerCase() === event.key.toLowerCase())
+          : undefined;
+        if (shortcutItem) {
+          event.preventDefault();
+          router.push(shortcutItem.href);
+          return;
+        }
         switch (event.key.toLowerCase()) {
           case "+":
           case "=":
@@ -251,7 +271,7 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
           <span className="a11y-button-text">크게</span>
         </button>
         <button
-          aria-pressed={contrast === "high"}
+          aria-pressed={contrast === "high" ? "true" : "false"}
           className="a11y-button"
           onClick={() => applyContrast(contrast === "high" ? "normal" : "high")}
           title="고대비 화면 (Alt + H)"

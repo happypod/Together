@@ -83,6 +83,7 @@ const rolePermissions = {
     "contact-log:write",
     "incident:write",
   ],
+  RESIDENT: ["dashboard:read"],
   LINKER: [
     "dashboard:read",
     "group:read",

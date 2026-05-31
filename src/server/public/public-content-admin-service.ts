@@ -12,6 +12,11 @@ import {
 import { assertNoForbiddenSensitiveInfo } from "@/domain/privacy";
 import { writeAuditLog } from "@/server/audit/audit-log";
 import { prisma } from "@/server/db/prisma";
+import {
+  listEducationSchedulesAdminRows,
+  previewEducationScheduleAdminRows,
+  type EducationScheduleAdminRow,
+} from "@/server/public/education-schedule-service";
 
 export const NOTICE_TYPE_OPTIONS = [
   { value: "GENERAL", label: "일반 공지" },
@@ -83,6 +88,30 @@ export type PublicContentAdminView = {
     educationReceivedCount: number;
     educationConfirmedCount: number;
     educationCompletedCount: number;
+  };
+};
+
+export type NoticeAdminView = {
+  canManageNotices: boolean;
+  notices: PublicContentNoticeRow[];
+  summary: {
+    noticeCount: number;
+    visibleNoticeCount: number;
+    pinnedNoticeCount: number;
+  };
+};
+
+export type EducationApplicationsAdminView = {
+  canManageEducation: boolean;
+  educationSchedules: EducationScheduleAdminRow[];
+  educationApplications: EducationApplicationRow[];
+  summary: {
+    educationScheduleCount: number;
+    educationScheduleVisibleCount: number;
+    educationReceivedCount: number;
+    educationConfirmedCount: number;
+    educationCompletedCount: number;
+    educationCanceledCount: number;
   };
 };
 
@@ -332,6 +361,69 @@ export async function listPublicContentAdminView(user: AuthUser): Promise<Public
   };
 }
 
+export async function listNoticeAdminView(user: AuthUser): Promise<NoticeAdminView> {
+  assertCanRead(user);
+
+  const notices = await prisma.notice.findMany({
+    orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
+    take: 80,
+    include: {
+      createdBy: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+  const noticeRows = notices.map(toNoticeRow);
+
+  return {
+    canManageNotices: canManagePublicNotices(user),
+    notices: noticeRows,
+    summary: {
+      noticeCount: noticeRows.length,
+      visibleNoticeCount: noticeRows.filter((notice) => notice.isVisible).length,
+      pinnedNoticeCount: noticeRows.filter((notice) => notice.isPinned).length,
+    },
+  };
+}
+
+export async function listEducationApplicationsAdminView(
+  user: AuthUser,
+): Promise<EducationApplicationsAdminView> {
+  assertCanRead(user);
+
+  const [educationApplications, educationSchedules] = await Promise.all([
+    prisma.educationApplication.findMany({
+      orderBy: [{ createdAt: "desc" }],
+      take: 120,
+      include: {
+        handledBy: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    }),
+    listEducationSchedulesAdminRows(),
+  ]);
+  const educationRows = educationApplications.map(toEducationRow);
+
+  return {
+    canManageEducation: canManageEducationApplications(user),
+    educationSchedules,
+    educationApplications: educationRows,
+    summary: {
+      educationScheduleCount: educationSchedules.length,
+      educationScheduleVisibleCount: educationSchedules.filter((item) => item.isVisible).length,
+      educationReceivedCount: educationRows.filter((item) => item.status === "RECEIVED").length,
+      educationConfirmedCount: educationRows.filter((item) => item.status === "CONFIRMED").length,
+      educationCompletedCount: educationRows.filter((item) => item.status === "COMPLETED").length,
+      educationCanceledCount: educationRows.filter((item) => item.status === "CANCELED").length,
+    },
+  };
+}
+
 export async function saveNotice(user: AuthUser, input: NoticeInput) {
   assertCanManageNotice(user);
 
@@ -504,5 +596,29 @@ export const previewPublicContentAdminView: PublicContentAdminView = {
     educationReceivedCount: 1,
     educationConfirmedCount: 0,
     educationCompletedCount: 0,
+  },
+};
+
+export const previewNoticeAdminView: NoticeAdminView = {
+  canManageNotices: false,
+  notices: previewPublicContentAdminView.notices,
+  summary: {
+    noticeCount: previewPublicContentAdminView.summary.noticeCount,
+    visibleNoticeCount: previewPublicContentAdminView.summary.visibleNoticeCount,
+    pinnedNoticeCount: previewPublicContentAdminView.summary.pinnedNoticeCount,
+  },
+};
+
+export const previewEducationApplicationsAdminView: EducationApplicationsAdminView = {
+  canManageEducation: false,
+  educationSchedules: previewEducationScheduleAdminRows,
+  educationApplications: previewPublicContentAdminView.educationApplications,
+  summary: {
+    educationScheduleCount: previewEducationScheduleAdminRows.length,
+    educationScheduleVisibleCount: previewEducationScheduleAdminRows.filter((item) => item.isVisible).length,
+    educationReceivedCount: previewPublicContentAdminView.summary.educationReceivedCount,
+    educationConfirmedCount: previewPublicContentAdminView.summary.educationConfirmedCount,
+    educationCompletedCount: previewPublicContentAdminView.summary.educationCompletedCount,
+    educationCanceledCount: 0,
   },
 };

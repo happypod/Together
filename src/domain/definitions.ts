@@ -4,6 +4,7 @@ export const USER_ROLES = [
   "SUPER_ADMIN",
   "ANCHOR_ADMIN",
   "COUNCIL_OPERATOR",
+  "RESIDENT",
   "LINKER",
   "TAXI_PARTNER",
   "VIEWER",

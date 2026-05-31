@@ -1,43 +1,29 @@
 import Link from "next/link";
-import { logoutAction } from "@/app/login/actions";
 import { FaIcon } from "@/components/ui/fa-icon";
-import { getCurrentUser } from "@/server/auth/session";
 
 /**
- * 공개 헤더 전용 로그인/로그아웃 버튼.
- * 관리자 접속 링크는 푸터에 있으므로 여기서는 제거한다.
+ * 공개 헤더 전용 역할 진입 버튼.
+ * 관리자 접속은 푸터의 운영관리 접속 링크로 유지한다.
  */
 export async function PublicLoginButton() {
-  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
-  try {
-    user = await getCurrentUser();
-  } catch {
-    user = null;
-  }
-
-  if (!user) {
-    return (
+  return (
+    <div className="pub-role-entry" aria-label="주민과 동행링커 대시보드">
       <Link
         className="pub-login-btn auth-action auth-action-primary"
-        href="/login"
-        aria-label="운영자 로그인"
+        href="/resident"
+        aria-label="주민 대시보드"
       >
-        <FaIcon name="login" />
-        <span className="pub-login-btn-text">로그인</span>
+        <FaIcon name="resident" />
+        <span className="pub-login-btn-text">주민</span>
       </Link>
-    );
-  }
-
-  return (
-    <form action={logoutAction} style={{ display: "contents" }}>
-      <button
+      <Link
         className="pub-login-btn auth-action auth-action-secondary"
-        type="submit"
-        aria-label="로그아웃"
+        href="/linker"
+        aria-label="동행링커 대시보드"
       >
-        <FaIcon name="logout" />
-        <span className="pub-login-btn-text">로그아웃</span>
-      </button>
-    </form>
+        <FaIcon name="car" />
+        <span className="pub-login-btn-text">링커</span>
+      </Link>
+    </div>
   );
 }

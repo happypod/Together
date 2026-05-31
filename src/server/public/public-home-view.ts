@@ -13,6 +13,11 @@ import {
   makePreviewCalendarMonths,
   type CalendarMonthData,
 } from "@/server/public/public-calendar-service";
+import {
+  listPublicEducationSchedules,
+  previewEducationSchedules,
+  type PublicEducationScheduleItem,
+} from "@/server/public/education-schedule-service";
 import { DEFAULT_OPERATING_SETTINGS } from "@/server/settings/defaults";
 import { getOperatingSettings } from "@/server/settings/settings-service";
 
@@ -23,19 +28,21 @@ export async function getPublicHomeView() {
   let notices = previewNotices;
   let feedbacks = previewFeedbacks;
   let calendarMonths: CalendarMonthData[] = makePreviewCalendarMonths();
+  let educationSchedules: PublicEducationScheduleItem[] = previewEducationSchedules;
 
   const now = new Date();
   const baseYear = now.getFullYear();
   const baseMonth = now.getMonth() + 1;
 
   try {
-    const [s, op, rec, not, fb, cal] = await Promise.all([
+    const [s, op, rec, not, fb, cal, edu] = await Promise.all([
       getOperatingSettings(),
       getPublicOperationSummary(),
       getPublicRecruitmentSchedules(),
       getPublicNotices(),
       getPublicFeedbacks(),
       getPublicCalendarRange(baseYear, baseMonth),
+      listPublicEducationSchedules(),
     ]);
     settings = s;
     summary = op;
@@ -43,12 +50,14 @@ export async function getPublicHomeView() {
     notices = not.length > 0 ? not : previewNotices;
     feedbacks = fb.length > 0 ? fb : previewFeedbacks;
     calendarMonths = cal;
+    educationSchedules = edu.length > 0 ? edu : previewEducationSchedules;
   } catch {
     // DB 연결이 없을 때도 공개 홈이 비어 보이지 않도록 미리보기 데이터를 사용한다.
   }
 
   return {
     calendarMonths,
+    educationSchedules,
     feedbacks,
     notices,
     recruitmentRows,

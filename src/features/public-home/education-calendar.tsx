@@ -169,7 +169,7 @@ export function EducationCalendar({ schedules, applyAnchor = "#education-apply-t
           return (
             <button
               aria-label={`${month}월 ${day}일${hasEvent ? `, 교육 ${items.length}건` : ""}`}
-              aria-pressed={isSelected}
+              aria-pressed={isSelected ? "true" : "false"}
               className={[
                 "edu-cal-cell",
                 hasEvent ? "edu-cal-cell--has-event" : "",

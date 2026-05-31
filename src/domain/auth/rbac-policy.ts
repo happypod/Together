@@ -8,11 +8,14 @@ import { type UserRole } from "@/domain/definitions";
 export type AdminRouteId =
   | "dashboard"
   | "requests"
+  | "participants"
   | "groups"
   | "calendar"
   | "trips"
   | "settlements"
   | "reports"
+  | "notices"
+  | "educationApplications"
   | "publicContent";
 
 export type ProtectedActionId =
@@ -72,6 +75,12 @@ export const ADMIN_ROUTE_ACCESS_RULES = [
     anyPermission: ["request:read"],
   },
   {
+    id: "participants",
+    label: "사용자현황",
+    href: "/admin/participants",
+    anyPermission: ["resident:read", "linker:read", "user:manage"],
+  },
+  {
     id: "groups",
     label: "공동예약",
     href: "/admin/groups",
@@ -105,6 +114,18 @@ export const ADMIN_ROUTE_ACCESS_RULES = [
     id: "publicContent",
     label: "공개 홈",
     href: "/admin/public-content",
+    anyPermission: ["setting:manage", "request:read"],
+  },
+  {
+    id: "notices",
+    label: "공지사항",
+    href: "/admin/notices",
+    anyPermission: ["setting:manage", "request:read"],
+  },
+  {
+    id: "educationApplications",
+    label: "교육 신청",
+    href: "/admin/education-applications",
     anyPermission: ["setting:manage", "request:read"],
   },
 ] satisfies readonly RouteAccessRule[];

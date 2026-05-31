@@ -72,7 +72,7 @@ export default async function ResidentRequestsPage({ searchParams }: RequestsPag
   let requests = previewRequests;
   let notice = user
     ? "미리보기 데이터가 표시됩니다."
-    : "로그인 후 실제 신청을 저장할 수 있습니다.";
+    : "권한이 있으면 실제 신청을 저장할 수 있습니다.";
 
   if (canRead) {
     try {
@@ -98,7 +98,7 @@ export default async function ResidentRequestsPage({ searchParams }: RequestsPag
             <p className="eyebrow">주민 신청</p>
             <h1 id="requests-title">주민 등록과 이동 신청</h1>
             <p className="lead">
-              필수 동의를 확인하고 신청을 접수합니다.
+              관리자가 직접 주민 정보와 이동 신청을 입력합니다.
               <br />
               민감정보는 입력하지 않습니다.
             </p>

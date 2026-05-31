@@ -1,40 +1,19 @@
 import { EducationApplicationForm } from "@/features/public-home/education-application-form";
 import { EducationCalendar, type EducationScheduleItem } from "@/features/public-home/education-calendar";
 
-const educationSchedules: EducationScheduleItem[] = [
-  {
-    id: "2026-06-08-am-collective",
-    courseType: "collective" as const,
-    title: "소원권역 동행이동 OS 집체교육",
-    date: "2026-06-08",
-    time: "오전 10:00",
-    target: "주민, 보호자, 동행자",
-    place: "소원권역 커뮤니티센터",
-    status: "접수 중",
-  },
-  {
-    id: "2026-06-15-pm-collective",
-    courseType: "collective" as const,
-    title: "동행서비스 이용자 등록 전 집체교육",
-    date: "2026-06-15",
-    time: "오후 2:00",
-    target: "주민, 동행자 포함",
-    place: "주민협의체 교육실",
-    status: "접수 중",
-  },
-  {
-    id: "2026-06-22-full-linker",
-    courseType: "linker-qualification" as const,
-    title: "동행링커 역량강화 및 민간자격과정",
-    date: "2026-06-22",
-    time: "오전 10:00 ~ 오후 4:00",
-    target: "동행링커 후보자",
-    place: "앵커조직 교육장",
-    status: "사전 신청",
-  },
-];
+type EducationSectionProps = {
+  defaultCourseType?: "collective" | "linker-qualification";
+  defaultParticipantType?: "resident" | "companion" | "linker";
+  schedules: EducationScheduleItem[];
+};
 
-export function EducationSection() {
+export function EducationSection({
+  defaultCourseType,
+  defaultParticipantType,
+  schedules,
+}: EducationSectionProps) {
+  const educationSchedules = schedules;
+
   return (
     <section
       className="pub-section pub-section-form pub-detail-section education-section"
@@ -91,32 +70,42 @@ export function EducationSection() {
               <h3 id="education-schedule-title">예정 교육 일정</h3>
             </div>
             <ul className="education-schedule-list">
-              {educationSchedules.map((schedule) => (
-                <li className="education-schedule-card" key={schedule.id}>
+              {educationSchedules.length > 0 ? (
+                educationSchedules.map((schedule) => (
+                  <li className="education-schedule-card" key={schedule.id}>
+                    <div>
+                      <span className="education-course-type">
+                        {schedule.courseType === "collective" ? "집체교육" : "민간자격과정"}
+                      </span>
+                      <strong>{schedule.title}</strong>
+                      <span>{schedule.target}</span>
+                    </div>
+                    <dl>
+                      <div>
+                        <dt>일자</dt>
+                        <dd>{schedule.date}</dd>
+                      </div>
+                      <div>
+                        <dt>시간</dt>
+                        <dd>{schedule.time}</dd>
+                      </div>
+                      <div>
+                        <dt>장소</dt>
+                        <dd>{schedule.place}</dd>
+                      </div>
+                    </dl>
+                    <mark>{schedule.status}</mark>
+                  </li>
+                ))
+              ) : (
+                <li className="education-schedule-card">
                   <div>
-                    <span className="education-course-type">
-                      {schedule.courseType === "collective" ? "집체교육" : "민간자격과정"}
-                    </span>
-                    <strong>{schedule.title}</strong>
-                    <span>{schedule.target}</span>
+                    <span className="education-course-type">교육 일정</span>
+                    <strong>등록된 교육 일정이 없습니다.</strong>
+                    <span>운영자가 교육 일정을 등록하면 이곳에 표시됩니다.</span>
                   </div>
-                  <dl>
-                    <div>
-                      <dt>일자</dt>
-                      <dd>{schedule.date}</dd>
-                    </div>
-                    <div>
-                      <dt>시간</dt>
-                      <dd>{schedule.time}</dd>
-                    </div>
-                    <div>
-                      <dt>장소</dt>
-                      <dd>{schedule.place}</dd>
-                    </div>
-                  </dl>
-                  <mark>{schedule.status}</mark>
                 </li>
-              ))}
+              )}
             </ul>
           </section>
 
@@ -129,8 +118,11 @@ export function EducationSection() {
               scheduleOptions={educationSchedules.map((schedule) => ({
                 id: schedule.id,
                 label: `${schedule.date} ${schedule.time} · ${schedule.title}`,
+                date: schedule.date,
                 courseType: schedule.courseType,
               }))}
+              defaultCourseType={defaultCourseType}
+              defaultParticipantType={defaultParticipantType}
             />
           </section>
         </div>

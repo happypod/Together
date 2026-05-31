@@ -32,6 +32,29 @@ export type PublicEducationApplicationState = {
   step?: "form" | "success";
 };
 
+export type PublicFeedbackState = {
+  ok: boolean;
+  message: string;
+  step?: "form" | "success";
+};
+
+export type PublicLinkerAssignmentState = {
+  ok: boolean;
+  message: string;
+  step?: "form" | "success";
+};
+
+function cleanText(value: unknown, maxLength: number) {
+  return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function readMulti(formData: FormData, key: string, allowed: readonly string[]) {
+  return formData
+    .getAll(key)
+    .map((value) => cleanText(value, 40))
+    .filter((value) => allowed.includes(value));
+}
+
 // ──────────────── 공개 신청 제출 ────────────────
 
 export async function createPublicMobilityRequest(
@@ -275,4 +298,149 @@ export async function createPublicEducationApplication(
     step: "success",
     message: `${participantDisplay}의 ${courseLabel} 신청이 접수되었습니다. 운영자가 ${preferredDate} 교육 가능 여부를 확인해 안내합니다.`,
   };
+}
+
+export async function createPublicFeedback(
+  _prev: PublicFeedbackState,
+  formData: FormData,
+): Promise<PublicFeedbackState> {
+  const sourceType = String(formData.get("sourceType") ?? "RESIDENT").trim();
+  const villageLabel = cleanText(formData.get("villageLabel"), 60);
+  const roleLabel = cleanText(formData.get("roleLabel"), 40);
+  const content = cleanText(formData.get("content"), 400);
+  const privacyConsent = formData.get("privacyConsent") === "true";
+
+  if (!content) {
+    return { ok: false, message: "소감 내용을 입력해 주세요.", step: "form" };
+  }
+  if (!privacyConsent) {
+    return { ok: false, message: "개인정보 기준 확인에 동의해 주세요.", step: "form" };
+  }
+  if (!["RESIDENT", "GUARDIAN", "LINKER", "OPERATOR"].includes(sourceType)) {
+    return { ok: false, message: "소감 구분을 다시 선택해 주세요.", step: "form" };
+  }
+
+  try {
+    assertNoForbiddenSensitiveInfo({ 이용소감: content });
+    await prisma.publicFeedback.create({
+      data: {
+        sourceType: sourceType as "RESIDENT" | "GUARDIAN" | "LINKER" | "OPERATOR",
+        villageLabel: villageLabel || null,
+        roleLabel: roleLabel || (sourceType === "LINKER" ? "동행링커" : "주민"),
+        content,
+        isApproved: false,
+        isVisible: false,
+      },
+    });
+
+    return {
+      ok: true,
+      message: "소감이 접수되었습니다. 운영자가 확인한 뒤 공개 여부를 결정합니다.",
+      step: "success",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "소감을 저장하지 못했습니다. 내용을 다시 확인해 주세요.",
+      step: "form",
+    };
+  }
+}
+
+export async function createPublicLinkerAssignmentRequest(
+  _prev: PublicLinkerAssignmentState,
+  formData: FormData,
+): Promise<PublicLinkerAssignmentState> {
+  const name = cleanText(formData.get("name"), 60);
+  const villageName = cleanText(formData.get("villageName"), 60);
+  const phone = cleanText(formData.get("phone"), 30);
+  const desiredJobField = cleanText(formData.get("desiredJobField"), 120);
+  const incidentComplaintHistory = cleanText(formData.get("notes"), 300);
+  const wantsJobConnection = formData.get("wantsJobConnection") === "true";
+  const privacyConsent = formData.get("privacyConsent") === "true";
+  const availableDays = readMulti(formData, "availableDays", ["월", "화", "수", "목", "금", "토"]);
+  const availableTimeWindows = readMulti(formData, "availableTimeWindows", ["오전", "오후"]);
+
+  if (!name || !villageName || !phone) {
+    return { ok: false, message: "이름, 마을명, 연락처를 입력해 주세요.", step: "form" };
+  }
+  if (phone.replace(/\D/g, "").length < 8) {
+    return { ok: false, message: "연락처는 숫자 8자리 이상이어야 합니다.", step: "form" };
+  }
+  if (availableDays.length === 0 || availableTimeWindows.length === 0) {
+    return { ok: false, message: "배정 가능한 요일과 시간대를 선택해 주세요.", step: "form" };
+  }
+  if (!privacyConsent) {
+    return { ok: false, message: "개인정보 기준 확인에 동의해 주세요.", step: "form" };
+  }
+
+  try {
+    assertNoForbiddenSensitiveInfo({
+      링커배정참고: incidentComplaintHistory,
+      희망활동: desiredJobField,
+    });
+
+    const existing = await prisma.linker.findFirst({
+      where: {
+        phone,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (existing) {
+      await prisma.linker.update({
+        where: { id: existing.id },
+        data: {
+          name,
+          villageName,
+          availableDays,
+          availableTimeWindows,
+          incidentComplaintHistory: incidentComplaintHistory || null,
+          wantsJobConnection,
+          desiredJobField: desiredJobField || null,
+          status: existing.status === "ENDED" ? "CANDIDATE" : existing.status,
+        },
+      });
+    } else {
+      await prisma.linker.create({
+        data: {
+          name,
+          villageName,
+          phone,
+          availableDays,
+          availableTimeWindows,
+          trainingCompleted: false,
+          fieldPracticeCompleted: false,
+          privacyPledgeSigned: false,
+          insuranceRegistered: false,
+          status: "CANDIDATE",
+          incidentComplaintHistory: incidentComplaintHistory || null,
+          wantsJobConnection,
+          desiredJobField: desiredJobField || null,
+        },
+      });
+    }
+
+    return {
+      ok: true,
+      message: "동행링커 배정 신청이 접수되었습니다. 운영자가 교육 이수와 배정 가능 여부를 확인합니다.",
+      step: "success",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "동행링커 배정 신청을 저장하지 못했습니다. 다시 확인해 주세요.",
+      step: "form",
+    };
+  }
 }

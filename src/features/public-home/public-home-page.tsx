@@ -19,6 +19,7 @@ import {
   type PublicRecruitmentRow,
 } from "@/server/public/public-home-service";
 import { type CalendarMonthData } from "@/server/public/public-calendar-service";
+import { type PublicEducationScheduleItem } from "@/server/public/education-schedule-service";
 import { type OperatingSettings } from "@/server/settings/defaults";
 
 type PublicHomePageProps = {
@@ -27,6 +28,7 @@ type PublicHomePageProps = {
   notices: PublicNoticeItem[];
   feedbacks: PublicFeedbackItem[];
   calendarMonths: CalendarMonthData[];
+  educationSchedules: PublicEducationScheduleItem[];
   activeMenuId?: PublicMenuId;
   settings: OperatingSettings;
 };
@@ -38,6 +40,7 @@ export function PublicHomePage({
   notices,
   feedbacks,
   calendarMonths,
+  educationSchedules,
   settings,
 }: PublicHomePageProps) {
   return (
@@ -48,6 +51,7 @@ export function PublicHomePage({
         {activeMenuId ? (
           renderPublicDetail(activeMenuId, {
             calendarMonths,
+            educationSchedules,
             feedbacks,
             notices,
             recruitmentRows,
@@ -84,12 +88,17 @@ export function PublicHomePage({
 
 type PublicDetailRenderProps = Pick<
   PublicHomePageProps,
-  "feedbacks" | "notices" | "recruitmentRows" | "settings" | "calendarMonths"
+  | "feedbacks"
+  | "notices"
+  | "recruitmentRows"
+  | "settings"
+  | "calendarMonths"
+  | "educationSchedules"
 >;
 
 function renderPublicDetail(
   activeMenuId: PublicMenuId,
-  { notices, recruitmentRows, settings, calendarMonths }: PublicDetailRenderProps,
+  { notices, recruitmentRows, settings, calendarMonths, educationSchedules }: PublicDetailRenderProps,
 ) {
   switch (activeMenuId) {
     case "apply":
@@ -99,7 +108,7 @@ function renderPublicDetail(
     case "schedule":
       return <WeeklyRecruitmentList rows={recruitmentRows} />;
     case "education":
-      return <EducationSection />;
+      return <EducationSection schedules={educationSchedules} />;
     case "notice":
       return <NoticeList notices={notices} />;
     case "contact":

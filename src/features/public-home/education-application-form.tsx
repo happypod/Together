@@ -10,8 +10,11 @@ type EducationApplicationFormProps = {
   scheduleOptions: {
     id: string;
     label: string;
+    date: string;
     courseType: "collective" | "linker-qualification";
   }[];
+  defaultCourseType?: "collective" | "linker-qualification";
+  defaultParticipantType?: "resident" | "companion" | "linker";
 };
 
 const initialState: PublicEducationApplicationState = {
@@ -20,7 +23,11 @@ const initialState: PublicEducationApplicationState = {
   step: "form",
 };
 
-export function EducationApplicationForm({ scheduleOptions }: EducationApplicationFormProps) {
+export function EducationApplicationForm({
+  defaultCourseType,
+  defaultParticipantType,
+  scheduleOptions,
+}: EducationApplicationFormProps) {
   const [state, formAction, pending] = useActionState(
     createPublicEducationApplication,
     initialState,
@@ -90,7 +97,12 @@ export function EducationApplicationForm({ scheduleOptions }: EducationApplicati
           </label>
           <label className="pub-label">
             참여 구분 <span className="pub-required" aria-label="필수">*</span>
-            <select className="pub-input" name="participantType" required>
+            <select
+              className="pub-input"
+              defaultValue={defaultParticipantType ?? ""}
+              name="participantType"
+              required
+            >
               <option value="">선택해 주세요</option>
               <option value="resident">주민</option>
               <option value="companion">동행자</option>
@@ -105,7 +117,12 @@ export function EducationApplicationForm({ scheduleOptions }: EducationApplicati
         <div className="pub-field-grid">
           <label className="pub-label">
             교육 과정 <span className="pub-required" aria-label="필수">*</span>
-            <select className="pub-input" name="courseType" required>
+            <select
+              className="pub-input"
+              defaultValue={defaultCourseType ?? ""}
+              name="courseType"
+              required
+            >
               <option value="">선택해 주세요</option>
               <option value="collective">소원권역 동행이동 OS 집체교육</option>
               <option value="linker-qualification">동행링커 민간자격과정</option>
@@ -116,7 +133,7 @@ export function EducationApplicationForm({ scheduleOptions }: EducationApplicati
             <select className="pub-input" name="preferredDate" required>
               <option value="">선택해 주세요</option>
               {scheduleOptions.map((option) => (
-                <option key={option.id} value={option.label}>
+                <option key={option.id} value={option.date}>
                   {option.label}
                 </option>
               ))}

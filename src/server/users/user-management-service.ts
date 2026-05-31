@@ -94,6 +94,7 @@ type UserRecord = {
 
 const anchorAssignableRoles: readonly UserRole[] = [
   "COUNCIL_OPERATOR",
+  "RESIDENT",
   "LINKER",
   "TAXI_PARTNER",
   "VIEWER",
@@ -103,6 +104,7 @@ export const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: "최고 관리자",
   ANCHOR_ADMIN: "운영 책임자",
   COUNCIL_OPERATOR: "협의체 운영자",
+  RESIDENT: "주민",
   LINKER: "동행링커",
   TAXI_PARTNER: "택시 파트너",
   VIEWER: "열람 전용",
@@ -112,6 +114,7 @@ const roleDescriptions: Record<UserRole, string> = {
   SUPER_ADMIN: "전체 설정, 사용자, 정산 잠금 해제까지 관리합니다.",
   ANCHOR_ADMIN: "운영 전반과 제한된 사용자 관리를 담당합니다.",
   COUNCIL_OPERATOR: "주민 신청, 공동예약, 운행 기록을 처리합니다.",
+  RESIDENT: "본인 신청, 교육, 공지, 이용 데이터를 확인합니다.",
   LINKER: "배정된 운행 체크와 귀가 확인을 처리합니다.",
   TAXI_PARTNER: "택시 예약 확정과 영수증 첨부를 처리합니다.",
   VIEWER: "개인정보 최소화 조회만 가능합니다.",
@@ -119,7 +122,7 @@ const roleDescriptions: Record<UserRole, string> = {
 
 const userManagementPolicy = {
   superAdmin: "SUPER_ADMIN은 모든 역할을 생성·변경할 수 있으며 마지막 최고 관리자 보호를 적용합니다.",
-  anchorAdmin: "ANCHOR_ADMIN은 협의체 운영자, 동행링커, 택시 파트너, 열람 전용 계정만 관리합니다.",
+  anchorAdmin: "ANCHOR_ADMIN은 주민, 협의체 운영자, 동행링커, 택시 파트너, 열람 전용 계정을 관리합니다.",
   dangerousAction: "역할 변경과 비활성화는 사유와 확인 체크가 필요하며 AuditLog에 기록합니다.",
   invitation: "초기 비밀번호를 입력하면 즉시 로그인 가능한 계정으로 생성하고, 비워두면 초대 대기 상태로 둡니다.",
 } as const;

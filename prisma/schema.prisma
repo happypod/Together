@@ -11,6 +11,7 @@ enum UserRole {
   SUPER_ADMIN
   ANCHOR_ADMIN
   COUNCIL_OPERATOR
+  RESIDENT
   LINKER
   TAXI_PARTNER
   VIEWER
@@ -157,6 +158,13 @@ enum EducationApplicationStatus {
   CANCELED
 }
 
+enum EducationScheduleStatus {
+  OPEN
+  PRE_APPLY
+  CLOSED
+  COMPLETED
+}
+
 enum PublicFeedbackSource {
   RESIDENT
   GUARDIAN
@@ -213,8 +221,11 @@ model User {
   createdMouRecords MouRecord[]     @relation("MouRecordCreatedBy")
   auditLogs       AuditLog[]
   createdNotices  Notice[]          @relation("NoticeCreatedBy")
+  createdEducationSchedules EducationSchedule[] @relation("EducationScheduleCreatedBy")
   handledEducationApplications EducationApplication[] @relation("EducationApplicationHandledBy")
   approvedFeedbacks PublicFeedback[] @relation("FeedbackApprovedBy")
+  residentProfile Resident?       @relation("ResidentUserAccount")
+  linkerProfile   Linker?         @relation("LinkerUserAccount")
 
   @@index([role])
   @@index([isActive])
@@ -222,6 +233,7 @@ model User {
 
 model Resident {
   id             String    @id @default(uuid()) @db.Uuid
+  userId         String?   @unique @db.Uuid
   name           String
   villageName    String
   phone          String
@@ -231,11 +243,13 @@ model Resident {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
+  user           User?     @relation("ResidentUserAccount", fields: [userId], references: [id])
   requests       MobilityRequest[]
   groupMembers   MobilityGroupMember[]
   surveys        SatisfactionSurvey[]
   jobConsultations JobConsultation[]
 
+  @@index([userId])
   @@index([villageName])
   @@index([phone])
   @@index([deletedAt])
@@ -328,6 +342,7 @@ model MobilityGroupMember {
 
 model Linker {
   id                         String       @id @default(uuid()) @db.Uuid
+  userId                     String?      @unique @db.Uuid
   name                       String
   villageName                String
   phone                      String
@@ -346,9 +361,11 @@ model Linker {
   updatedAt                  DateTime     @updatedAt
   deletedAt                  DateTime?
 
+  user                       User?        @relation("LinkerUserAccount", fields: [userId], references: [id])
   groups                     MobilityGroup[]
   jobConsultations           JobConsultation[]
 
+  @@index([userId])
   @@index([villageName])
   @@index([phone])
   @@index([status])
@@ -685,6 +702,29 @@ model EducationApplication {
   @@index([preferredDate])
   @@index([createdAt])
   @@index([handledByUserId])
+}
+
+model EducationSchedule {
+  id              String                  @id @default(uuid()) @db.Uuid
+  courseType      EducationCourseType
+  title           String
+  scheduleDate    DateTime                @db.Date
+  time            String
+  target          String
+  place           String
+  status          EducationScheduleStatus @default(OPEN)
+  isVisible       Boolean                 @default(true)
+  createdByUserId String                  @db.Uuid
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  createdBy       User                    @relation("EducationScheduleCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([scheduleDate])
+  @@index([courseType])
+  @@index([status])
+  @@index([isVisible, scheduleDate])
+  @@index([createdByUserId])
 }
 
 model PublicFeedback {

@@ -195,22 +195,9 @@ export function ResidentRequestWorkspace({
             </label>
           </fieldset>
 
-          {/* 필수 확인: 고령자를 위한 명확한 큰 체크박스 */}
-          <fieldset className="privacy-checks">
-            <legend>필수 확인</legend>
-            <label className="check-row">
-              <input name="privacyConsent" required type="checkbox" value="true" />
-              개인정보 수집·이용 동의 확인
-            </label>
-            <label className="check-row">
-              <input name="thirdPartyConsent" required type="checkbox" value="true" />
-              택시예약 등 제3자 제공 동의 확인
-            </label>
-            <label className="check-row">
-              <input name="sensitiveInfoNotCollected" required type="checkbox" value="true" />
-              주민등록번호와 세부 건강정보를 입력하지 않았음
-            </label>
-          </fieldset>
+          <input name="privacyConsent" type="hidden" value="true" />
+          <input name="thirdPartyConsent" type="hidden" value="true" />
+          <input name="sensitiveInfoNotCollected" type="hidden" value="true" />
 
           {state.message ? (
             <p className={state.ok ? "form-message success" : "form-message"} role="status">
@@ -218,9 +205,17 @@ export function ResidentRequestWorkspace({
             </p>
           ) : null}
 
-          <button className="primary-action" disabled={!canWrite || pending} type="submit">
-            {pending ? "저장 중" : canWrite ? "신청 저장" : "로그인 후 저장"}
-          </button>
+          <div className="request-form-actions">
+            <button className="primary-action" disabled={!canWrite || pending} type="submit">
+              {pending ? "저장 중" : "저장"}
+            </button>
+            <a className="secondary-action" href="/admin/participants">
+              수정
+            </a>
+            <button className="secondary-action" disabled={pending} type="reset">
+              초기화
+            </button>
+          </div>
         </form>
       </section>
     ),

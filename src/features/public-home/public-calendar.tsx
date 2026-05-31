@@ -366,7 +366,7 @@ function MonthView({
           return (
             <button
               aria-label={`${month}월 ${day}일${data ? `, ${TONE_LABEL[tone]}, ${data.events.length}건` : ""}`}
-              aria-pressed={isSelected}
+              aria-pressed={isSelected ? "true" : "false"}
               className={[
                 "cal-cell",
                 TONE_CLASS[tone],
@@ -486,7 +486,7 @@ function WeekView({
                 className="cal-week-date-btn"
                 onClick={() => onSelectDate(isSelected ? null : key)}
                 type="button"
-                aria-pressed={isSelected}
+                aria-pressed={isSelected ? "true" : "false"}
                 aria-label={`${day.getUTCMonth() + 1}월 ${day.getUTCDate()}일 ${WEEK_DAY_LABELS[i] ?? ""}`}
               >
                 <span className="cal-week-day-label">{WEEK_DAY_LABELS[i]}</span>
