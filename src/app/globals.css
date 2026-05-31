@@ -4757,12 +4757,6 @@ html {
   align-items: center;
   gap: 6px;
 }
-.hide-a11y-toolbar,
-.a11y-toolbar,
-.a11y-toolbar-desktop,
-.a11y-toolbar-popover {
-  display: none !important;
-}
 .a11y-status {
   font-size: 13px;
   font-weight: 800;
@@ -8227,6 +8221,10 @@ textarea.pub-input {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
+}
+
+.public-admin-summary-grid--compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .public-admin-summary-card,
