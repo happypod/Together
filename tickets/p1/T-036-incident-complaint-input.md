@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-005
 - Area: frontend, backend, operations
 - Work type: feature
 - Target surface: admin-desktop, admin-mobile, mobile-link
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -82,24 +82,36 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: incident reports
-- API/Action: createIncidentReport
+- 구현 파일 또는 모듈: `src/server/incidents/incident-report-service.ts`, `src/server/trips/trip-operation-service.ts`, `src/features/trip-operations/trip-operation-workspace.tsx`
+- API/Action: `createIncidentReport`, `recordIncidentReportTx`, `tripOperationAction`
 - DB/Migration: T-002 모델 사용
-- UI/Route: 그룹 상세 내 사고/민원 입력
+- UI/Route: `/admin/trips` 운행 카드 내 사고·민원 입력, `TRIP_CHECK` 모바일 링크 내 선택 입력
 - AuditLog: CREATE
 - 설정값: 해당 없음
 
 ## 완료 기준
 
-- [ ] 사고/민원을 그룹에 연결해 저장할 수 있다.
-- [ ] 민감정보 입력 금지 안내가 표시된다.
-- [ ] 권한 없는 사용자는 입력할 수 없다.
-- [ ] 월간 집계에 반영할 수 있다.
-- [ ] 검증 기록이 남았다.
+- [x] 사고/민원을 그룹에 연결해 저장할 수 있다.
+- [x] 민감정보 입력 금지 안내가 표시된다.
+- [x] 권한 없는 사용자는 입력할 수 없다.
+- [x] 월간 집계에 반영할 수 있다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
+  - `corepack.cmd pnpm typecheck`
+  - `corepack.cmd pnpm lint`
+  - `corepack.cmd pnpm build`
+  - `npx.cmd tsx -e "... calculateMonthlyReportSnapshot ..."`
+  - `npx.cmd tsx -e "... getDisallowedMobileFields ..."`
+  - headless Chrome DevTools Protocol 렌더링 검증: `/admin/trips` 390px, 1280px
 - 결과:
+  - 타입, 린트, 프로덕션 빌드 통과
+  - 월간 집계에서 같은 운행의 사고·민원 2건이 `incidentComplaintCount: 2`로 계산됨
+  - `TRIP_CHECK` 모바일 링크는 사고·민원 입력 필드를 허용하고, `TAXI_CONFIRM`은 같은 필드를 차단함
 - 수동 확인:
+  - `C:\tmp\together-t036-incident-qa\t036-admin-trips-incident-mobile-focused.png`
+  - `C:\tmp\together-t036-incident-qa\t036-admin-trips-incident-desktop-focused.png`
 - 남은 리스크:
+  - 현재 셸에 `.env`, `DATABASE_URL`, 로컬 PostgreSQL 연결이 없어 인증 사용자 기반 DB E2E는 후속 DB 연결 티켓에서 검증한다.

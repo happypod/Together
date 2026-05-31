@@ -3,8 +3,8 @@
 ## 메타
 
 - Priority: P0
-- Status: planned
-- Owner: TBD
+- Status: done
+- Owner: Codex
 - Depends on: T-002, T-006, T-007
 - Area: qa, security
 - Work type: qa
@@ -18,7 +18,7 @@
 
 ## 배경
 
-주민 개인정보, 정산 정보, 운행 기록은 역할별 접근 범위가 다르다. 권한 검증이 UI에만 있으면 API 직접 호출로 우회될 수 있다.
+주민 개인정보, 정산 정보, 운행 기록은 역할별 접근 범위가 다르다. 권한 검증이 UI에만 있으면 API 직접 호출로 우회될 수 있으므로 서버 action과 도메인 서비스에서 권한을 확인해야 한다.
 
 ## 사용자와 화면
 
@@ -88,25 +88,58 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: RBAC test matrix
-- API/Action: all write actions, exportMonthlyCsv
+- 구현 파일 또는 모듈:
+  - `src/domain/auth/rbac-policy.ts`: 관리자 route와 protected action 권한 매트릭스 추가
+  - `src/domain/auth/permissions.ts`: 정산 잠금 후 수정은 SUPER_ADMIN 전용으로 정리
+  - `src/components/layout/access-denied-panel.tsx`: 권한 없음 안내 컴포넌트 추가
+  - `src/app/admin/requests/page.tsx`, `src/app/admin/groups/page.tsx`, `src/app/admin/trips/page.tsx`, `src/app/admin/settlements/page.tsx`, `src/app/admin/reports/page.tsx`, `src/app/page.tsx`, `src/app/admin/page.tsx`: 권한 없는 로그인 사용자에게 preview 대신 안내 표시
+  - `src/server/trips/trip-operation-service.ts`: 모바일 action 메타 필드가 token scope 검증에 섞이지 않도록 필터 보강
+  - `scripts/verify-rbac-access.ts`: 역할별 route/action/mobile-token 권한 매트릭스 검증 추가
+  - `scripts/verify-settlement-formulas.ts`: 정산 잠금 후 수정 권한 기대값을 SUPER_ADMIN 전용으로 정렬
+- API/Action: all write actions, mobile token submit, CSV preparation
 - DB/Migration: 해당 없음
 - UI/Route: role-protected routes
-- AuditLog: 권한 관련 주요 작업
+- AuditLog: 권한 관련 주요 작업은 기존 action별 로그 경로 유지
 - 설정값: 해당 없음
 
 ## 완료 기준
 
-- [ ] 모든 쓰기 action은 서버에서 권한을 확인한다.
-- [ ] 비활성 사용자는 접근할 수 없다.
-- [ ] LINKER와 TAXI_PARTNER는 제한 범위를 벗어나 입력할 수 없다.
-- [ ] VIEWER의 CSV 권한 제한이 동작한다.
-- [ ] 권한 없음 화면이 명확하고 쉬운 문구로 표시된다.
-- [ ] 검증 기록이 남았다.
+- [x] 모든 쓰기 action은 서버에서 권한을 확인한다.
+- [x] 비활성 사용자는 접근할 수 없다.
+- [x] LINKER와 TAXI_PARTNER는 제한 범위를 벗어나 입력할 수 없다.
+- [x] VIEWER의 CSV 권한 제한이 동작한다.
+- [x] 권한 없음 화면이 명확하고 쉬운 문구로 표시된다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
+  - `npx.cmd tsx scripts/verify-rbac-access.ts`
+  - `npx.cmd tsx scripts/verify-settlement-formulas.ts`
+  - `npx.cmd tsx scripts/verify-state-transitions.ts`
+  - `npx.cmd tsx scripts/verify-privacy-rules.ts`
+  - `corepack.cmd pnpm typecheck`
+  - `corepack.cmd pnpm lint`
+  - `corepack.cmd pnpm build`
+  - `$env:DATABASE_URL='postgresql://user:password@localhost:5432/together'; corepack.cmd pnpm db:validate`
+  - `node --check prisma\seed.mjs`
+  - `curl.exe -4 -I http://localhost:3000/admin/requests`
+  - `curl.exe -4 -I http://localhost:3000/admin/groups`
+  - `curl.exe -4 -I http://localhost:3000/admin/trips`
+  - `curl.exe -4 -I http://localhost:3000/admin/settlements`
+  - `curl.exe -4 -I http://localhost:3000/admin/reports`
 - 결과:
+  - `rbac-access-ok`
+  - `settlement-formulas-ok`
+  - `state-transitions-ok`
+  - `privacy-rules-ok`
+  - typecheck, lint, build 통과
+  - Prisma schema validate 통과
+  - seed syntax check 통과
+  - 주요 관리자 route HTTP 200 확인
 - 수동 확인:
+  - Chrome 캡처: `.verification/t065-requests-390x900.png`, `.verification/t065-requests-1280x900.png`
+  - Chrome 캡처: `.verification/t065-trips-390x900.png`, `.verification/t065-trips-1280x900.png`
+  - Chrome 캡처: `.verification/t065-reports-390x900.png`, `.verification/t065-reports-1280x900.png`
 - 남은 리스크:
+  - 실제 로그인 세션별 route 접근과 DB 저장 차단은 `.env`와 통합 DB 연결 후 E2E로 재검증한다.

@@ -1,5 +1,7 @@
 import { MobileTokenForm } from "@/app/m/[token]/mobile-token-form";
 import { getMobileTokenView } from "@/server/mobile-forms/token-service";
+import { DEFAULT_OPERATING_SETTINGS } from "@/server/settings/defaults";
+import { getOperatingSettings } from "@/server/settings/settings-service";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,10 @@ const scopeLabels = {
 
 export default async function MobileTokenPage({ params }: MobileTokenPageProps) {
   const { token } = await params;
-  const view = await getMobileTokenView(token);
+  const [view, settings] = await Promise.all([
+    getMobileTokenView(token),
+    getOperatingSettings().catch(() => DEFAULT_OPERATING_SETTINGS),
+  ]);
 
   if (!view.ok) {
     const reason = reasonText[view.reason];
@@ -60,6 +65,8 @@ export default async function MobileTokenPage({ params }: MobileTokenPageProps) 
         <h1 id="mobile-token-title">내용 확인</h1>
         <p className="lead">
           이 화면에서 입력한 내용만 저장됩니다. 관리자 화면 전체 권한은 제공하지 않습니다.
+          <br />
+          주민등록번호와 건강 세부정보는 적지 않습니다.
         </p>
         <dl className="token-summary">
           <div>
@@ -75,7 +82,12 @@ export default async function MobileTokenPage({ params }: MobileTokenPageProps) 
             <dd>{view.expiresAt.toLocaleString("ko-KR")}</dd>
           </div>
         </dl>
-        <MobileTokenForm allowedFields={view.allowedFields} token={token} />
+        <MobileTokenForm
+          allowedFields={view.allowedFields}
+          scope={view.scope}
+          settings={settings}
+          token={token}
+        />
       </section>
     </main>
   );

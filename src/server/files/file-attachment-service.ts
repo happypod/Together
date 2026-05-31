@@ -1,5 +1,6 @@
 import { type FileType, type Prisma, type PrismaClient } from "@prisma/client";
 import { assertPermission, type AuthUser } from "@/domain/auth/permissions";
+import { assertNoForbiddenSensitiveInfo } from "@/domain/privacy";
 import { prisma } from "@/server/db/prisma";
 import { writeAuditLog } from "@/server/audit/audit-log";
 
@@ -40,6 +41,11 @@ export function validateFileAttachment(input: FileAttachmentInput) {
   if (!["https:", "http:"].includes(url.protocol)) {
     throw new Error("영수증 링크는 http 또는 https 주소여야 합니다.");
   }
+
+  assertNoForbiddenSensitiveInfo({
+    파일명: input.fileName,
+    "영수증 링크": input.url,
+  });
 }
 
 export async function createFileAttachment(

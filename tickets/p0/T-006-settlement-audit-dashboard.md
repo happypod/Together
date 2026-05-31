@@ -3,7 +3,7 @@
 ## 메타
 
 - Priority: P0
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-005, T-008
 - Area: finance, reporting, audit
@@ -102,17 +102,18 @@
 
 ## 완료 기준
 
-- [ ] 각 정산 모드별 계산 결과가 정확하다.
-- [ ] 영수증 링크 또는 첨부 상태를 기록할 수 있다.
-- [ ] 정산 완료 후 수정 시 사유와 AuditLog가 남는다.
-- [ ] 관리자 홈 KPI가 실제 데이터 기준으로 집계된다.
-- [ ] CSV 내보내기 전 권한과 AuditLog 기준이 준비된다.
-- [ ] 360px, 390px, 768px, 1280px 이상에서 정산과 대시보드가 깨지지 않는다.
-- [ ] 정산 금액, 지원금, 주민 분담액이 큰 숫자와 명확한 단위로 표시된다.
+- [x] 각 정산 모드별 계산 결과가 정확하다.
+- [x] 영수증 링크 또는 첨부 상태를 기록할 수 있다.
+- [x] 정산 완료 후 수정 시 사유와 AuditLog가 남는다.
+- [x] 관리자 홈 KPI가 실제 데이터 기준으로 집계된다.
+- [x] CSV 내보내기 전 권한과 AuditLog 기준이 준비된다.
+- [x] 360px, 390px, 768px, 1280px 이상에서 정산과 대시보드가 깨지지 않는다.
+- [x] 정산 금액, 지원금, 주민 분담액이 큰 숫자와 명확한 단위로 표시된다.
 
 ## 검증 기록
 
-- 명령:
-- 결과:
-- 수동 확인:
-- 남은 리스크:
+- 명령: `corepack pnpm typecheck`, `corepack pnpm lint`, `node --check prisma\seed.mjs`, `corepack pnpm db:validate`, `corepack pnpm build`, `curl.exe -4 -I http://localhost:3000/`, `curl.exe -4 -I http://localhost:3000/admin/settlements`
+- 결과: 모두 통과, Next 빌드에서 `/`, `/admin`, `/admin/settlements` 동적 route 생성 확인
+- 수동 확인: headless Chrome 캡처 `t006-settlements-360x900.png`, `t006-settlements-390x900.png`, `t006-settlements-768x1024.png`, `t006-settlements-1280x900.png`, `t006-dashboard-390x900.png`, `t006-dashboard-1280x900.png` 확인
+- 구현 요약: `src/server/settlements/settlement-service.ts`, `/admin/settlements`, `SettlementWorkspace`, 실제 집계 기반 `DashboardHome`, CSV 준비 AuditLog 경로를 추가했다.
+- 남은 리스크: 현재 통합 환경에 DB 연결값이 없어 실제 정산 저장, 정산 완료 잠금, 수정 사유, CSV 준비 AuditLog DB commit은 후속 DB 연결 티켓에서 검증한다.

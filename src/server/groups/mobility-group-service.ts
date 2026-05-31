@@ -6,10 +6,10 @@ import {
 } from "@/domain/definitions";
 import {
   canTransitionMobilityStatus,
-  MOBILITY_STATUS_TRANSITIONS,
+  getNextMobilityStatusActions,
   requiresStatusReason,
 } from "@/domain/status";
-import { maskPhone } from "@/domain/privacy";
+import { assertNoForbiddenSensitiveInfo, maskPhone } from "@/domain/privacy";
 import { writeAuditLog } from "@/server/audit/audit-log";
 import { prisma } from "@/server/db/prisma";
 import { DEFAULT_OPERATING_SETTINGS } from "@/server/settings/defaults";
@@ -236,11 +236,26 @@ function toGroupListItem(group: GroupRecord): MobilityGroupListItem {
       returnConfirmedAt: formatDateTimeInput(member.returnConfirmedAt),
       memberStatus: member.memberStatus,
     })),
-    nextStatuses: MOBILITY_STATUS_TRANSITIONS[group.status].map((status) => ({
-      value: status,
-      label: MOBILITY_STATUS_LABELS[status],
-    })),
+    nextStatuses: getNextMobilityStatusActions(group.status),
   };
+}
+
+async function syncGroupRequestStatuses(
+  tx: Prisma.TransactionClient,
+  groupId: string,
+  status: MobilityStatus,
+) {
+  await tx.mobilityRequest.updateMany({
+    where: {
+      groupMembers: {
+        some: {
+          groupId,
+          memberStatus: "ACTIVE",
+        },
+      },
+    },
+    data: { status },
+  });
 }
 
 export async function listGroupCandidateRequests(): Promise<GroupCandidateRequest[]> {
@@ -370,6 +385,11 @@ export async function createMobilityGroup(user: AuthUser, input: CreateMobilityG
     const destinationSummary =
       optionalCleanText(input.destinationSummary, 120) ??
       [...new Set(requests.map((request) => request.destination))].join(", ").slice(0, 120);
+    const notes = optionalCleanText(input.notes, 300);
+    assertNoForbiddenSensitiveInfo({
+      목적지요약: destinationSummary,
+      그룹메모: notes,
+    });
     const group = await tx.mobilityGroup.create({
       data: {
         groupName: buildGroupName(
@@ -382,7 +402,7 @@ export async function createMobilityGroup(user: AuthUser, input: CreateMobilityG
         destinationSummary,
         returnEta: parseOptionalDateTime(input.returnEta),
         status: "GROUP_READY",
-        notes: optionalCleanText(input.notes, 300),
+        notes,
         createdByUserId: user.id,
       },
     });
@@ -458,13 +478,15 @@ export async function addMemberToGroup(user: AuthUser, input: AddGroupMemberInpu
     }
 
     const pickupOrder = group.members.length + 1;
+    const pickupPlace = optionalCleanText(input.pickupPlace, 120) ?? request.origin;
+    assertNoForbiddenSensitiveInfo({ 픽업장소: pickupPlace });
     const member = await tx.mobilityGroupMember.create({
       data: {
         groupId: group.id,
         requestId: request.id,
         residentId: request.residentId,
         pickupOrder,
-        pickupPlace: optionalCleanText(input.pickupPlace, 120) ?? request.origin,
+        pickupPlace,
         pickupEta: parseOptionalDateTime(input.pickupEta),
       },
     });
@@ -568,11 +590,13 @@ export async function updatePickupOrder(user: AuthUser, input: UpdatePickupInput
       });
     }
 
+    const pickupPlace = requireText("픽업 장소", input.pickupPlace, 120);
+    assertNoForbiddenSensitiveInfo({ 픽업장소: pickupPlace });
     const updated = await tx.mobilityGroupMember.update({
       where: { id: member.id },
       data: {
         pickupOrder: input.pickupOrder,
-        pickupPlace: requireText("픽업 장소", input.pickupPlace, 120),
+        pickupPlace,
         pickupEta: parseOptionalDateTime(input.pickupEta),
       },
     });
@@ -594,6 +618,7 @@ export async function transitionGroupStatus(user: AuthUser, input: TransitionGro
   assertPermission(user, "group:write");
   const nextStatus = parseMobilityStatus(input.nextStatus);
   const reason = optionalCleanText(input.reason, 300);
+  assertNoForbiddenSensitiveInfo({ 상태변경사유: reason });
 
   return prisma.$transaction(async (tx) => {
     const group = await tx.mobilityGroup.findFirst({
@@ -616,6 +641,7 @@ export async function transitionGroupStatus(user: AuthUser, input: TransitionGro
         exceptionReason: reason,
       },
     });
+    await syncGroupRequestStatuses(tx, group.id, nextStatus);
 
     await writeAuditLog(tx, {
       userId: user.id,
@@ -623,7 +649,11 @@ export async function transitionGroupStatus(user: AuthUser, input: TransitionGro
       targetType: "MobilityGroup",
       targetId: group.id,
       beforeValue: { status: group.status, exceptionReason: group.exceptionReason },
-      afterValue: { status: updated.status, exceptionReason: updated.exceptionReason },
+      afterValue: {
+        status: updated.status,
+        exceptionReason: updated.exceptionReason,
+        syncedActiveRequests: true,
+      },
     });
     return updated;
   });

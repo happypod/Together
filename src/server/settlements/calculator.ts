@@ -86,6 +86,20 @@ function getResidentTotalBeforeRounding(input: RequiredSettlementValues) {
   }
 }
 
+function assertCoverageDoesNotExceedFare(input: RequiredSettlementValues) {
+  if (input.communityFundSupportAmount > input.totalFare) {
+    throw new Error("상생기금 지원금은 총 택시요금을 초과할 수 없습니다.");
+  }
+
+  if (
+    input.settlementMode === "CUSTOM" &&
+    input.customResidentTotalShare !== undefined &&
+    input.customResidentTotalShare + input.communityFundSupportAmount > input.totalFare
+  ) {
+    throw new Error("주민 총 분담금과 상생기금 지원금의 합은 총 택시요금을 초과할 수 없습니다.");
+  }
+}
+
 type RequiredSettlementValues = {
   totalFare: number;
   residentCount: number;
@@ -123,16 +137,22 @@ export function calculateSettlement(
     communityFundSupportAmount,
     customResidentTotalShare: input.customResidentTotalShare,
   };
+  assertCoverageDoesNotExceedFare(requiredValues);
+
   const residentTotalBeforeRounding = getResidentTotalBeforeRounding(requiredValues);
   const residentPerPersonShare = applyFareRounding(
     residentTotalBeforeRounding / residentCount,
     roundingPolicy,
   );
+  const residentCoverageLimit = Math.max(0, input.totalFare - communityFundSupportAmount);
   const residentTotalShare = Math.min(
-    input.totalFare,
+    residentCoverageLimit,
     residentPerPersonShare * residentCount,
   );
-  const anchorSupportAmount = Math.max(0, input.totalFare - residentTotalShare);
+  const anchorSupportAmount = Math.max(
+    0,
+    input.totalFare - residentTotalShare - communityFundSupportAmount,
+  );
 
   return {
     settlementMode,
@@ -144,6 +164,6 @@ export function calculateSettlement(
     anchorSupportAmount,
     communityFundSupportAmount: input.communityFundSupportAmount ?? null,
     linkerActivityFee: input.linkerActivityFee ?? null,
-    roundingAdjustmentAmount: residentTotalBeforeRounding - residentTotalShare,
+    roundingAdjustmentAmount: Math.max(0, residentTotalBeforeRounding - residentTotalShare),
   };
 }

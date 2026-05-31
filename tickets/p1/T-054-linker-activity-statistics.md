@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
-- Owner: TBD
+- Status: done
+- Owner: Codex
 - Depends on: T-005
 - Area: report, operations
 - Work type: report
 - Target surface: admin-desktop, admin-mobile, report
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -82,24 +82,43 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: linker activity stats
+- 구현 파일 또는 모듈:
+  - `src/server/reports/linker-activity-statistics-service.ts`
+  - `src/app/admin/reports/page.tsx`
+  - `src/app/globals.css`
 - API/Action: getLinkerActivityStats
 - DB/Migration: Linker, MobilityGroup 사용
-- UI/Route: 동행링커 활동통계
+- UI/Route: `/admin/reports?month=YYYY-MM`, `/admin/reports?month=YYYY-MM&linkerStatus=AVAILABLE`
 - AuditLog: 해당 없음
 - 설정값: reportDateBasis
 
 ## 완료 기준
 
-- [ ] 월별 링커 활동 건수가 집계된다.
-- [ ] 활동 링커 수가 계산된다.
-- [ ] 링커별 배정 이력을 확인할 수 있다.
-- [ ] 모바일에서 요약이 읽기 쉽다.
-- [ ] 검증 기록이 남았다.
+- [x] 월별 링커 활동 건수가 집계된다.
+- [x] 활동 링커 수가 계산된다.
+- [x] 링커별 배정 이력을 확인할 수 있다.
+- [x] 모바일에서 요약이 읽기 쉽다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
+  - `corepack.cmd pnpm typecheck`
+  - `npx.cmd tsx -e "import { createPreviewLinkerActivityStats } ..."`
+  - `corepack.cmd pnpm lint`
+  - `corepack.cmd pnpm build`
+  - `curl.exe -4 -I http://localhost:3000/admin/reports?month=2026-06`
 - 결과:
+  - 타입체크, 샘플 집계, 린트, 프로덕션 빌드 통과.
+  - 시연 데이터 기준 전체 3명, 활동 2명, 배정 3건, 완료 3건, 사고·민원 연결 2건 집계 확인.
+  - `linkerStatus=AVAILABLE` 필터에서 김동행 1명, 배정 2건, 완료 2건으로 축소 확인.
 - 수동 확인:
+  - 모바일 390px 긴 viewport에서 동행링커 활동통계 카드, 상태 필터, 링커별 배정 이력 확인.
+  - 데스크톱 1366px 긴 viewport에서 요약 카드, 상태 필터, 동행링커별 활동 표 확인.
+  - 스크린샷:
+    - `C:\tmp\together-t054-linker-activity-qa\t054-linker-activity-mobile-tall.png`
+    - `C:\tmp\together-t054-linker-activity-qa\t054-linker-activity-desktop-tall.png`
+    - `C:\tmp\together-t054-linker-activity-qa\t054-linker-activity-filter-mobile-tall.png`
 - 남은 리스크:
+  - 현재 셸에 `.env`, `DATABASE_URL`, 로컬 PostgreSQL 연결이 없어 DB 커밋 기반 인증 E2E는 후속 DB 연결 티켓에서 검증한다.
+  - Browser 플러그인은 `windows sandbox failed: spawn setup refresh`로 실패하여 헤드리스 Chrome 대체 검증을 사용했다.

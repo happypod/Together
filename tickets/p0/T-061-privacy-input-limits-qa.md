@@ -3,7 +3,7 @@
 ## 메타
 
 - Priority: P0
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-003, T-006, T-007
 - Area: qa, privacy
@@ -18,7 +18,7 @@
 
 ## 배경
 
-백천만 동행이동 OS는 주민 연락처와 이동 목적지를 다루므로 개인정보 최소수집과 민감정보 미수집 확인이 실제 화면과 서버 검증에 모두 반영되어야 한다.
+백천마을 동행이동 OS는 주민 연락처와 이동 목적지를 다루므로 개인정보 최소수집과 민감정보 미수집 확인이 실제 화면과 서버 검증에 모두 반영되어야 한다.
 
 ## 사용자와 화면
 
@@ -88,26 +88,43 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: QA checklist, privacy test cases
-- API/Action: createMobilityRequest, listResidents, exportMonthlyCsv, uploadReceipt
+- 구현 파일 또는 모듈: `src/domain/privacy.ts`, `scripts/verify-privacy-rules.ts`
+- API/Action: `createResidentRequest`, 그룹/운행/정산 입력, `recordCsvExportAudit`, `validateFileAttachment`, 모바일 링크 제출
 - DB/Migration: 해당 없음
-- UI/Route: 신청 등록, 신청 목록, 모바일 링크, 정산/영수증
-- AuditLog: CSV, 파일첨부, 주요 수정
-- 설정값: 개인정보 보관기간, CSV 권한
+- UI/Route: `/admin/requests`, `/admin/groups`, `/admin/trips`, `/admin/settlements`, `/m/[token]`
+- AuditLog: CSV, 파일첨부, 주요 수정 값은 `redactSensitiveValue` 기준으로 마스킹 또는 요약 처리
+- 설정값: CSV 권한은 `csv:export`, 파일 크기 제한은 `RECEIPT_MAX_FILE_MB`
 
 ## 완료 기준
 
-- [ ] 필수 동의가 없으면 신청 저장이 실패한다.
-- [ ] 목록 화면의 연락처가 마스킹된다.
-- [ ] 권한 없는 사용자는 전체 연락처와 CSV를 볼 수 없다.
-- [ ] 민감정보 입력을 유도하는 UI 문구가 없다.
-- [ ] 모바일 360px, 390px, 768px, 1280px 이상에서 개인정보 안내가 잘리지 않는다.
-- [ ] 글자 크기, 색상 대비, 버튼 크기, 쉬운 문구가 `design_style_guide.md` 기준을 만족한다.
-- [ ] 검증 기록이 남았다.
+- [x] 필수 동의가 없으면 신청 저장이 실패한다.
+- [x] 목록 화면의 연락처가 마스킹된다.
+- [x] 권한 없는 사용자는 전체 연락처와 CSV를 볼 수 없다.
+- [x] 민감정보 입력을 유도하는 UI 문구가 없다.
+- [x] 모바일 360px, 390px, 768px, 1280px 이상에서 개인정보 안내가 잘리지 않는다.
+- [x] 글자 크기, 색상 대비, 버튼 크기, 쉬운 문구가 `design_style_guide.md` 기준을 만족한다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
-- 결과:
+  - `npx.cmd tsx scripts/verify-privacy-rules.ts`
+  - `corepack.cmd pnpm typecheck`
+  - `corepack.cmd pnpm lint`
+  - `$env:DATABASE_URL='postgresql://user:password@localhost:5432/together'; corepack.cmd pnpm db:validate`
+  - `node --check prisma\seed.mjs`
+  - `corepack.cmd pnpm build`
+  - `curl.exe -4 -I http://localhost:3000/admin/requests`
+  - `curl.exe -4 -I http://localhost:3000/admin/groups`
+  - `curl.exe -4 -I http://localhost:3000/admin/trips`
+  - `curl.exe -4 -I http://localhost:3000/admin/settlements`
+  - `curl.exe -4 -I http://localhost:3000/m/test-token`
+- 결과: 통과. DB 스키마 검증은 실제 연결 없이 더미 `DATABASE_URL`로 실행했다.
 - 수동 확인:
+  - Chrome headless 캡처: `.verification/t061-requests-{360x900,390x900,768x1024,1280x900}.png`
+  - Chrome headless 캡처: `.verification/t061-groups-{360x900,390x900,768x1024,1280x900}.png`
+  - Chrome headless 캡처: `.verification/t061-trips-{360x900,390x900,768x1024,1280x900}.png`
+  - Chrome headless 캡처: `.verification/t061-settlements-{360x900,390x900,768x1024,1280x900}.png`
+  - 모바일 링크 오류 화면 캡처: `.verification/t061-mobile-token-{360x900,390x900,768x1024,1280x900}.png`
 - 남은 리스크:
+  - 실제 DB 연결과 저장 커밋 검증은 후속 DB 연결 티켓에서 수행한다.

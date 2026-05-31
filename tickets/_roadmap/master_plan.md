@@ -1,15 +1,15 @@
-# 백천만 동행이동 OS MVP Master Plan
+# 백천마을 동행이동 OS MVP Master Plan
 
 - 작성일: 2026-05-30
-- 기준 문서: 첨부 설계문서 `백천만 동행이동 OS MVP 설계문서`
-- 공식명: 백천만 동행이동 OS
-- 주민 홍보명: 백천만 동행택시
+- 기준 문서: 첨부 설계문서 `백천마을 동행이동 OS MVP 설계문서`
+- 공식명: 백천마을 동행이동 OS
+- 주민 홍보명: 백천마을 동행택시
 - 시스템 성격: 공동예약형 생활이동 및 동행링커 운영관리 시스템
 - 1차 구현 범위: 관리자 웹 중심 MVP, 모바일 링크형 입력폼 보조
 
 ## 1. 제품 목적
 
-백천만 동행이동 OS는 소원권역 어촌신활력증진사업의 사회혁신프로그램 운영을 위한 내부 운영관리 시스템이다. 주민협의체와 앵커조직이 주민 생활이동 신청을 접수하고, 주민 최대 3명 단위의 공동예약 그룹을 구성하며, 동행링커 배정, 택시연합 예약요청, 운행상태, 귀가확인, 정산, 만족도, 월간 성과를 관리한다.
+백천마을 동행이동 OS는 소원권역 어촌신활력증진사업의 사회혁신프로그램 운영을 위한 내부 운영관리 시스템이다. 주민협의체와 앵커조직이 주민 생활이동 신청을 접수하고, 주민 최대 3명 단위의 공동예약 그룹을 구성하며, 동행링커 배정, 택시연합 예약요청, 운행상태, 귀가확인, 정산, 만족도, 월간 성과를 관리한다.
 
 이 시스템은 공개 모빌리티 플랫폼이 아니다. 일반 주민은 복잡한 회원가입 앱이 아니라 신청 링크 또는 현장 운영자 입력을 통해 접근한다.
 
@@ -448,7 +448,7 @@ MVP 구현 시 Server Action 또는 API는 아래 명령형 계약을 기준으�
 | --- | --- | --- | --- |
 | `getDashboardSummary` | VIEW 권한 | N | 기간 기준 |
 | `getMonthlyReport` | VIEW 권한 | N | 월 기준 |
-| `exportMonthlyCsv` | SUPER_ADMIN, ANCHOR_ADMIN, VIEWER allowed | Y | 사유 입력, 개인정보 범위 |
+| `exportMonthlyCsv` | SUPER_ADMIN, ANCHOR_ADMIN. VIEWER는 별도 CSV 권한 없으면 조회만 가능 | Y | 사유 입력, 개인정보 범위 |
 | `createMobileFormToken` | SUPER_ADMIN, ANCHOR_ADMIN, COUNCIL_OPERATOR | Y | 만료시간, 대상 범위 |
 | `submitMobileForm` | token scope | Y | 토큰 유효성, 1회성 정책 |
 | `writeAuditLog` | internal only | N | 직접 외부 호출 금지 |

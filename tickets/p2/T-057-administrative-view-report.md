@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P2
-- Status: planned
-- Owner: TBD
+- Status: done
+- Owner: Codex
 - Depends on: T-052
 - Area: report, auth, frontend
 - Work type: feature
 - Target surface: admin-desktop, report
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -51,7 +51,7 @@
 ## 정합성
 
 - [x] `definitions.md`의 VIEWER 권한 원칙과 일치한다.
-- [x] 공개 플랫폼으로 확장하지 않는다.
+- [x] 공개 플로우로 확장하지 않는다.
 - [x] `design_style_guide.md`의 리포트 표시 기준을 따른다.
 
 ## 모델별 지시
@@ -66,7 +66,7 @@
 
 ### Backend
 
-- VIEWER 전용 조회 action 또는 projection을 구현한다.
+- VIEWER 전용 조회 projection을 구현한다.
 
 ### Frontend
 
@@ -82,24 +82,37 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: administrative report view
-- API/Action: getMonthlyReport with viewer projection
+- 구현 파일 또는 모듈: `src/server/reports/administrative-report-service.ts`, `src/app/admin/reports/administrative/page.tsx`, `src/app/admin/reports/page.tsx`, `src/app/globals.css`
+- API/Action: `getMonthlyReport` 기반 `createAdministrativeReportProjection`
 - DB/Migration: 해당 없음
-- UI/Route: 행정 열람 리포트
-- AuditLog: 필요 시 조회 로그 검토
-- 설정값: reportDateBasis
+- UI/Route: `/admin/reports/administrative?month=YYYY-MM`
+- AuditLog: 해당 없음. CSV 다운로드와 AuditLog는 기존 CSV 기능으로 분리
+- 설정값: `reportDateBasis`
 
 ## 완료 기준
 
-- [ ] VIEWER가 개인정보 최소화 리포트를 조회할 수 있다.
-- [ ] 상세 연락처와 민감 메모가 노출되지 않는다.
-- [ ] 월간 리포트 수치와 일치한다.
-- [ ] 모바일에서도 요약 지표가 읽기 쉽다.
-- [ ] 검증 기록이 남았다.
+- [x] VIEWER가 개인정보 최소화 리포트를 조회할 수 있다.
+- [x] 상세 연락처와 민감 메모가 노출되지 않는다.
+- [x] 월간 리포트 수치와 일치한다.
+- [x] 모바일에서도 요약 지표가 읽기 쉽다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
+  - `corepack.cmd pnpm typecheck`
+  - `corepack.cmd pnpm lint`
+  - `corepack.cmd pnpm build`
+  - `curl.exe -4 -I http://localhost:3000/admin/reports/administrative?month=2026-06`
+  - Chrome CDP 렌더링 검증: `/admin/reports?month=2026-06`에서 행정 열람 링크 진입, `/admin/reports/administrative?month=2026-06` 데스크톱/모바일 캡처
 - 결과:
+  - typecheck/lint/build 통과
+  - `/admin/reports/administrative?month=2026-06` HTTP 200
+  - 행정 열람 화면에서 핵심 지표 8개와 개인정보 제외 규칙 4개 렌더링 확인
+  - 전화번호 패턴, preview resident/linker 내부 ID, 외부 공유 링크 노출 없음
+  - 모바일 390px에서 가로 넘침 없음
 - 수동 확인:
-- 남은 리스크:
+  - `.verification/t057-admin-report-qa/t057-admin-report-desktop.png`
+  - `.verification/t057-admin-report-qa/t057-admin-report-mobile-viewport.png`
+- 잔여 리스크:
+  - 현재 검증은 `DATABASE_URL` 없는 미리보기 데이터 기준이다. DB 연동 후 인증된 VIEWER 계정으로 실데이터 수치와 권한 범위를 재검증한다.

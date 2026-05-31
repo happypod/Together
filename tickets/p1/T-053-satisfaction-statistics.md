@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-036
 - Area: report, frontend, backend
 - Work type: report
 - Target surface: admin-desktop, admin-mobile, report
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -82,24 +82,24 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: satisfaction statistics
-- API/Action: getSatisfactionStats
+- 구현 파일 또는 모듈: `src/server/surveys/satisfaction-survey-service.ts`, `src/app/admin/reports/page.tsx`, `src/app/globals.css`
+- API/Action: `getSatisfactionStats`, `summarizeSatisfactionStats`, `createPreviewSatisfactionStats`
 - DB/Migration: SatisfactionSurvey 사용
-- UI/Route: 만족도 통계
+- UI/Route: `/admin/reports?month=YYYY-MM`
 - AuditLog: 해당 없음
 - 설정값: reportDateBasis
 
 ## 완료 기준
 
-- [ ] 만족도 평균이 정확히 집계된다.
-- [ ] 불편사항과 개선 요청을 조회할 수 있다.
-- [ ] 개인정보 노출 위험이 낮다.
-- [ ] 모바일에서 핵심 지표가 읽기 쉽다.
-- [ ] 검증 기록이 남았다.
+- [x] 만족도 평균이 정확히 집계된다.
+- [x] 불편사항과 개선 요청을 조회할 수 있다.
+- [x] 개인정보 노출 위험이 낮다.
+- [x] 모바일에서 핵심 지표가 읽기 쉽다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
-- 명령:
-- 결과:
-- 수동 확인:
-- 남은 리스크:
+- 명령: `corepack.cmd pnpm typecheck`, `corepack.cmd pnpm lint`, `corepack.cmd pnpm build`, `npx.cmd tsx -e "..."`, Chrome DevTools Protocol rendered QA
+- 결과: 통과. 이용자/동행링커/택시/비용부담/재이용/정서회복 평균, 4점 이상 비율, 이슈 응답, 사고·민원 연결 수, 주관식 민감정보 제외가 검증되었다.
+- 수동 확인: `/admin/reports?month=2026-06` 390px 모바일 만족도 카드와 1280px 데스크톱 만족도 통계 섹션 렌더링 확인. 스크린샷: `C:\tmp\together-t053-satisfaction-stats-qa\t053-satisfaction-stats-mobile.png`, `C:\tmp\together-t053-satisfaction-stats-qa\t053-satisfaction-stats-desktop.png`
+- 남은 리스크: `.env`, `DATABASE_URL`, 로컬 PostgreSQL 연결이 없어 DB-backed 인증 E2E와 실제 운영 데이터 검증은 후속 DB 연결 티켓에서 수행한다. Chromium 검증 중 `/favicon.ico` 404가 기록되었으나 만족도 통계 기능 오류는 아니다.

@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
-- Owner: TBD
+- Status: done
+- Owner: Codex
 - Depends on: T-037
 - Area: qa, frontend, accessibility
 - Work type: qa
 - Target surface: admin-mobile, mobile-link
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -83,7 +83,7 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: mobile QA checklist
+- 구현 파일 또는 모듈: mobile QA checklist, `src/app/globals.css`
 - API/Action: submitMobileForm, updateTripStatus, confirmReturn
 - DB/Migration: 해당 없음
 - UI/Route: mobile-link, admin mobile routes
@@ -92,16 +92,17 @@
 
 ## 완료 기준
 
-- [ ] 360px에서 핵심 입력을 완료할 수 있다.
-- [ ] 390px에서 버튼과 입력 필드가 겹치지 않는다.
-- [ ] 768px에서 레이아웃 전환이 자연스럽다.
-- [ ] 브라우저 줌 125%에서도 주요 작업이 가능하다.
-- [ ] 고령 사용자 기준의 글자 크기와 버튼 크기가 충족된다.
-- [ ] 검증 기록이 남았다.
+- [x] 360px에서 핵심 입력을 완료할 수 있다.
+- [x] 390px에서 버튼과 입력 필드가 겹치지 않는다.
+- [x] 768px에서 레이아웃 전환이 자연스럽다.
+- [x] 브라우저 줌 125%에서도 주요 작업이 가능하다.
+- [x] 고령 사용자 기준의 글자 크기와 버튼 크기가 충족된다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
-- 명령:
-- 결과:
-- 수동 확인:
-- 남은 리스크:
+- 명령: Browser plugin 연결 시도, Chrome CDP 모바일 audit, Chrome CDP 상호작용 검증, `corepack.cmd pnpm typecheck`, `corepack.cmd pnpm lint`, `corepack.cmd pnpm build`
+- 결과: `/`, `/admin/requests`, `/admin/groups`, `/admin/calendar`, `/admin/trips`, `/admin/settlements?tab=monthly`, `/admin/reports?month=2026-06`, `/m/t068-invalid-token`을 360px, 390px, 768px에서 재검증했다. blank, framework overlay, body horizontal overflow, 실제 터치 가능 요소 44px 미만 항목이 모두 0이다.
+- 수동 확인: `.verification/t064-mobile-qa/t064-after-*.png` 및 `t064-mobile-audit-after.json`에 화면별 증거를 남겼다. 390px 설정 팝업, 하단 내비게이션 이동, 좌우 스와이프 순환 이동도 `t064-interactions.json`과 스크린샷으로 확인했다.
+- 수정 내용: 125% 확대 상당의 312px viewport에서 모바일 링크 오류 화면 문구가 잘리지 않도록 `html` 최소 폭, 모바일 링크 제목/안내문 줄바꿈과 글자 크기를 보강했다.
+- 남은 리스크: 실제 유효 모바일 토큰 입력폼은 현재 통합 셸에 `DATABASE_URL`이 없어 DB 기반 토큰 발급 후 E2E로 검증하지 못했다. 기존 T-037 범위의 모바일 토큰 서비스와 필드 guard는 소스/스크립트 기준으로 검증된 상태다.

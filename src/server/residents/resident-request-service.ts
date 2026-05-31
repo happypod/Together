@@ -9,12 +9,9 @@ import {
   type MobilityPurpose,
   type MobilityStatus,
 } from "@/domain/definitions";
-import { maskPhone } from "@/domain/privacy";
+import { assertNoForbiddenSensitiveInfo, maskPhone } from "@/domain/privacy";
 import { writeAuditLog } from "@/server/audit/audit-log";
 import { prisma } from "@/server/db/prisma";
-
-const forbiddenSensitiveTextPattern =
-  /(주민등록번호|진단명|처치|상담내용|상담 내용|혈압|혈당|복용약|처방|수술|질환|장애등급)/;
 
 export type ResidentRequestFormInput = {
   residentId?: string;
@@ -138,16 +135,6 @@ function parsePurposeFilter(value?: string): MobilityPurpose | undefined {
     : undefined;
 }
 
-function assertNoForbiddenSensitiveText(fields: Record<string, string | undefined>) {
-  for (const [label, value] of Object.entries(fields)) {
-    if (value && forbiddenSensitiveTextPattern.test(value)) {
-      throw new Error(
-        `${label}에는 주민등록번호, 진단명, 처치·상담 내용 같은 민감정보를 입력하지 않습니다.`,
-      );
-    }
-  }
-}
-
 function normalizeRequestInput(input: ResidentRequestFormInput) {
   const residentId = optionalCleanText(input.residentId, 80);
   const residentName = residentId
@@ -170,7 +157,7 @@ function normalizeRequestInput(input: ResidentRequestFormInput) {
     throw new Error("개인정보 동의, 제3자 제공 동의, 민감정보 미수집 확인이 모두 필요합니다.");
   }
 
-  assertNoForbiddenSensitiveText({
+  assertNoForbiddenSensitiveInfo({
     주민메모: memo,
     출발지: origin,
     목적지: destination,
@@ -293,102 +280,108 @@ export async function listMobilityRequests(
   }));
 }
 
+export async function createResidentRequestTx(
+  tx: Prisma.TransactionClient,
+  user: AuthUser,
+  input: ResidentRequestFormInput,
+) {
+  const normalized = normalizeRequestInput(input);
+
+  const resident = normalized.residentId
+    ? await tx.resident.findFirst({
+        where: { id: normalized.residentId, deletedAt: null },
+      })
+    : await tx.resident.create({
+        data: {
+          name: normalized.residentName ?? "",
+          villageName: normalized.villageName ?? "",
+          phone: normalized.phone ?? "",
+          guardianPhone: normalized.guardianPhone,
+          memo: normalized.memo,
+        },
+      });
+
+  if (!resident) {
+    throw new Error("선택한 주민을 찾을 수 없습니다.");
+  }
+
+  const duplicate = await tx.mobilityRequest.findFirst({
+    where: {
+      residentId: resident.id,
+      desiredDate: normalized.desiredDate,
+      desiredTimeWindow: normalized.desiredTimeWindow,
+      deletedAt: null,
+      status: {
+        notIn: [...CANCELLATION_STATUSES],
+      },
+    },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    throw new Error("같은 주민의 같은 날짜와 시간대 신청이 이미 있습니다.");
+  }
+
+  const request = await tx.mobilityRequest.create({
+    data: {
+      residentId: resident.id,
+      desiredDate: normalized.desiredDate,
+      desiredTimeWindow: normalized.desiredTimeWindow,
+      purpose: normalized.purpose,
+      origin: normalized.origin,
+      destination: normalized.destination,
+      needsCompanion: normalized.needsCompanion,
+      notes: normalized.notes,
+      status: "REQUESTED",
+      privacyConsent: normalized.privacyConsent,
+      thirdPartyConsent: normalized.thirdPartyConsent,
+      sensitiveInfoNotCollected: normalized.sensitiveInfoNotCollected,
+      createdByUserId: user.id,
+    },
+  });
+
+  if (!normalized.residentId) {
+    await writeAuditLog(tx, {
+      userId: user.id,
+      action: "CREATE",
+      targetType: "Resident",
+      targetId: resident.id,
+      afterValue: {
+        name: resident.name,
+        villageName: resident.villageName,
+        phone: resident.phone,
+        guardianPhone: resident.guardianPhone,
+      },
+    });
+  }
+
+  await writeAuditLog(tx, {
+    userId: user.id,
+    action: "CREATE",
+    targetType: "MobilityRequest",
+    targetId: request.id,
+    afterValue: {
+      residentId: resident.id,
+      desiredDate: formatDateOnly(request.desiredDate),
+      desiredTimeWindow: request.desiredTimeWindow,
+      purpose: request.purpose,
+      origin: request.origin,
+      destination: request.destination,
+      status: request.status,
+      privacyConsent: request.privacyConsent,
+      thirdPartyConsent: request.thirdPartyConsent,
+      sensitiveInfoNotCollected: request.sensitiveInfoNotCollected,
+    },
+  });
+
+  return { residentId: resident.id, requestId: request.id };
+}
+
 export async function createResidentRequest(user: AuthUser, input: ResidentRequestFormInput) {
   assertPermission(user, "resident:write");
   assertPermission(user, "request:write");
 
-  const normalized = normalizeRequestInput(input);
-
-  return prisma.$transaction(async (tx) => {
-    const resident = normalized.residentId
-      ? await tx.resident.findFirst({
-          where: { id: normalized.residentId, deletedAt: null },
-        })
-      : await tx.resident.create({
-          data: {
-            name: normalized.residentName ?? "",
-            villageName: normalized.villageName ?? "",
-            phone: normalized.phone ?? "",
-            guardianPhone: normalized.guardianPhone,
-            memo: normalized.memo,
-          },
-        });
-
-    if (!resident) {
-      throw new Error("선택한 주민을 찾을 수 없습니다.");
-    }
-
-    const duplicate = await tx.mobilityRequest.findFirst({
-      where: {
-        residentId: resident.id,
-        desiredDate: normalized.desiredDate,
-        desiredTimeWindow: normalized.desiredTimeWindow,
-        deletedAt: null,
-        status: {
-          notIn: [...CANCELLATION_STATUSES],
-        },
-      },
-      select: { id: true },
-    });
-
-    if (duplicate) {
-      throw new Error("같은 주민의 같은 날짜와 시간대 신청이 이미 있습니다.");
-    }
-
-    const request = await tx.mobilityRequest.create({
-      data: {
-        residentId: resident.id,
-        desiredDate: normalized.desiredDate,
-        desiredTimeWindow: normalized.desiredTimeWindow,
-        purpose: normalized.purpose,
-        origin: normalized.origin,
-        destination: normalized.destination,
-        needsCompanion: normalized.needsCompanion,
-        notes: normalized.notes,
-        status: "REQUESTED",
-        privacyConsent: normalized.privacyConsent,
-        thirdPartyConsent: normalized.thirdPartyConsent,
-        sensitiveInfoNotCollected: normalized.sensitiveInfoNotCollected,
-        createdByUserId: user.id,
-      },
-    });
-
-    if (!normalized.residentId) {
-      await writeAuditLog(tx, {
-        userId: user.id,
-        action: "CREATE",
-        targetType: "Resident",
-        targetId: resident.id,
-        afterValue: {
-          name: resident.name,
-          villageName: resident.villageName,
-          phone: resident.phone,
-          guardianPhone: resident.guardianPhone,
-        },
-      });
-    }
-
-    await writeAuditLog(tx, {
-      userId: user.id,
-      action: "CREATE",
-      targetType: "MobilityRequest",
-      targetId: request.id,
-      afterValue: {
-        residentId: resident.id,
-        desiredDate: formatDateOnly(request.desiredDate),
-        desiredTimeWindow: request.desiredTimeWindow,
-        purpose: request.purpose,
-        origin: request.origin,
-        destination: request.destination,
-        status: request.status,
-        privacyConsent: request.privacyConsent,
-        thirdPartyConsent: request.thirdPartyConsent,
-        sensitiveInfoNotCollected: request.sensitiveInfoNotCollected,
-      },
-    });
-
-    return { residentId: resident.id, requestId: request.id };
-  });
+  return prisma.$transaction((tx) => createResidentRequestTx(tx, user, input));
 }
 
 export async function updateResident(
@@ -414,7 +407,7 @@ export async function updateResident(
     guardianPhone: optionalCleanText(input.guardianPhone, 30),
     memo: optionalCleanText(input.memo, 300),
   };
-  assertNoForbiddenSensitiveText({ 주민메모: next.memo });
+  assertNoForbiddenSensitiveInfo({ 주민메모: next.memo });
 
   const updated = await prisma.resident.update({
     where: { id: residentId },

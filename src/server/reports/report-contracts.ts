@@ -104,6 +104,12 @@ export const MONTHLY_REPORT_METRICS: MetricContract[] = [
     source: "SatisfactionSurvey",
   },
   {
+    key: "emotionalRecoveryAverage",
+    label: "정서회복 평균",
+    formula: "참여자 정서회복 응답(1~5) 평균",
+    source: "SatisfactionSurvey.emotionalRecovery",
+  },
+  {
     key: "incidentComplaintCount",
     label: "사고·민원 건수",
     formula: "해당 월 IncidentReport 수",
@@ -114,6 +120,18 @@ export const MONTHLY_REPORT_METRICS: MetricContract[] = [
     label: "상생기금 조성액",
     formula: "해당 월 CommunityFund CONTRIBUTION 합계",
     source: "CommunityFund",
+  },
+  {
+    key: "jobConsultationCount",
+    label: "취업연계 상담 건수",
+    formula: "해당 월 JobConsultation 기록 수",
+    source: "JobConsultation.consultedAt",
+  },
+  {
+    key: "mouCount",
+    label: "MOU 수",
+    formula: "해당 월 체결일 기준 MouRecord 수",
+    source: "MouRecord.signedAt",
   },
 ];
 
@@ -188,6 +206,20 @@ export const MONTHLY_SUMMARY_CSV_COLUMNS: CsvColumnContract[] = [
     privacy: "public",
     note: "CONTRIBUTION 합계",
   },
+  {
+    key: "jobConsultationCount",
+    label: "취업연계 상담 건수",
+    source: "MonthlyReport.jobConsultationCount",
+    privacy: "public",
+    note: "연락처와 민감 세부 기록 없이 건수만 제공",
+  },
+  {
+    key: "mouCount",
+    label: "MOU 수",
+    source: "MonthlyReport.mouCount",
+    privacy: "public",
+    note: "기관별 문서 링크 없이 월 체결 건수만 제공",
+  },
 ];
 
 export const TRIP_DETAIL_CSV_COLUMNS: CsvColumnContract[] = [
@@ -231,7 +263,7 @@ export const TRIP_DETAIL_CSV_COLUMNS: CsvColumnContract[] = [
     label: "목적지 요약",
     source: "MobilityGroup.destinationSummary",
     privacy: "public",
-    note: "진단명, 처치 내용 입력 금지",
+    note: "민감정보 입력 금지",
   },
   {
     key: "linkerName",
@@ -266,7 +298,7 @@ export const TRIP_DETAIL_CSV_COLUMNS: CsvColumnContract[] = [
     label: "상생기금 지원 기록",
     source: "Settlement.communityFundSupportAmount",
     privacy: "public",
-    note: "택시요금 할인 또는 환급으로 표시하지 않음",
+    note: "별도 지원 항목",
   },
   {
     key: "returnConfirmedAt",
@@ -287,7 +319,7 @@ export const CONTACT_LOG_INPUT_RULES = {
   ],
   requiredFields: ["targetType", "targetId", "contactType", "contactedAt", "summary"],
   privacyRule:
-    "연락 요약에는 주민등록번호, 세부 건강정보, 진단명, 처치·상담 내용을 입력하지 않는다.",
+    "연락 요약에는 고유식별정보와 건강 세부정보를 입력하지 않는다.",
   linkRule:
     "ContactLog는 targetType과 targetId로 주요 운영 대상에 연결하며 삭제 대신 감사 가능한 수정 이력을 우선한다.",
 } as const;

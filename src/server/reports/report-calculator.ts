@@ -53,9 +53,10 @@ export type ReportLinkerRecord = {
 
 export type ReportSurveyRecord = {
   groupId: string;
+  emotionalRecovery?: number | null;
   userSatisfaction: number;
-  linkerSatisfaction: number;
-  taxiSatisfaction: number;
+  linkerSatisfaction?: number | null;
+  taxiSatisfaction?: number | null;
 };
 
 export type ReportIncidentRecord = {
@@ -66,6 +67,16 @@ export type ReportCommunityFundRecord = {
   month: string;
   amount: number;
   fundType: "CONTRIBUTION" | "SUPPORT_RECORD";
+};
+
+export type ReportJobConsultationRecord = {
+  consultedAt: DateLike;
+  status?: string | null;
+};
+
+export type ReportMouRecord = {
+  signedAt: DateLike;
+  status?: string | null;
 };
 
 export type DashboardSummaryInput = {
@@ -84,6 +95,8 @@ export type MonthlyReportInput = {
   surveys?: ReportSurveyRecord[];
   incidents?: ReportIncidentRecord[];
   communityFunds?: ReportCommunityFundRecord[];
+  jobConsultations?: ReportJobConsultationRecord[];
+  mouRecords?: ReportMouRecord[];
 };
 
 function toDate(value: DateLike) {
@@ -243,11 +256,18 @@ export function calculateMonthlyReportSnapshot(input: MonthlyReportInput) {
   const monthSurveys = (input.surveys ?? []).filter((survey) =>
     monthGroupIds.has(survey.groupId),
   );
-  const satisfactionScores = monthSurveys.flatMap((survey) => [
-    survey.userSatisfaction,
-    survey.linkerSatisfaction,
-    survey.taxiSatisfaction,
-  ]);
+  const isFiniteScore = (value: number | null | undefined): value is number =>
+    typeof value === "number" && Number.isFinite(value);
+  const satisfactionScores = monthSurveys
+    .flatMap((survey) => [
+      survey.userSatisfaction,
+      survey.linkerSatisfaction,
+      survey.taxiSatisfaction,
+    ])
+    .filter(isFiniteScore);
+  const emotionalRecoveryScores = monthSurveys
+    .map((survey) => survey.emotionalRecovery)
+    .filter(isFiniteScore);
   const activeLinkerIds = new Set(
     monthGroups
       .map((group) => group.linkerId)
@@ -274,13 +294,18 @@ export function calculateMonthlyReportSnapshot(input: MonthlyReportInput) {
     ),
     estimatedSaving: totalAnchorSupport,
     satisfactionAverage: averageOneDecimal(satisfactionScores),
+    emotionalRecoveryAverage: averageOneDecimal(emotionalRecoveryScores),
     incidentComplaintCount: (input.incidents ?? []).filter((incident) =>
       monthGroupIds.has(incident.groupId),
     ).length,
     communityFundAmount: (input.communityFunds ?? [])
       .filter((fund) => fund.month === input.month && fund.fundType === "CONTRIBUTION")
       .reduce((sum, fund) => sum + fund.amount, 0),
-    jobConsultationCount: 0,
-    mouCount: 0,
+    jobConsultationCount: (input.jobConsultations ?? []).filter(
+      (record) => monthKey(record.consultedAt) === input.month,
+    ).length,
+    mouCount: (input.mouRecords ?? []).filter(
+      (record) => monthKey(record.signedAt) === input.month,
+    ).length,
   };
 }

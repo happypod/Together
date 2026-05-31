@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { AccessDeniedPanel } from "@/components/layout/access-denied-panel";
 import { hasPermission } from "@/domain/auth/permissions";
 import { MobilityGroupWorkspace } from "@/features/mobility-groups/mobility-group-workspace";
 import { getCurrentUser } from "@/server/auth/session";
@@ -81,14 +82,18 @@ export default async function MobilityGroupsPage({ searchParams }: GroupsPagePro
             </p>
           </div>
         </section>
-        <MobilityGroupWorkspace
-          canWrite={canWrite}
-          candidates={candidates}
-          filters={filters}
-          groups={groups}
-          notice={notice}
-          settings={settings}
-        />
+        {user && !canRead ? (
+          <AccessDeniedPanel description="이 역할은 공동예약 그룹 정보를 볼 수 없습니다. 필요한 경우 운영 책임자에게 권한을 확인해 주세요." />
+        ) : (
+          <MobilityGroupWorkspace
+            canWrite={canWrite}
+            candidates={candidates}
+            filters={filters}
+            groups={groups}
+            notice={notice}
+            settings={settings}
+          />
+        )}
       </main>
     </AppShell>
   );

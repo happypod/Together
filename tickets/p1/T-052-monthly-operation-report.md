@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-006
 - Area: report, backend, frontend
 - Work type: report
 - Target surface: admin-desktop, admin-mobile, report
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -82,24 +82,24 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: monthly reports
-- API/Action: getMonthlyReport
-- DB/Migration: MonthlyReport 사용 또는 캐시
-- UI/Route: 월간 운영리포트
+- 구현 파일 또는 모듈: `src/server/reports/monthly-report-service.ts`, `src/server/reports/report-calculator.ts`, `src/app/admin/reports/page.tsx`, `src/app/globals.css`
+- API/Action: `getMonthlyReport`, `createPreviewMonthlyReport`, `calculateMonthlyReportSnapshot`
+- DB/Migration: 실시간 집계 사용. 기존 `MonthlyReport` 모델은 후속 저장/캐시 확장 시 재사용한다.
+- UI/Route: `/admin/reports?month=YYYY-MM`
 - AuditLog: 해당 없음
 - 설정값: reportDateBasis
 
 ## 완료 기준
 
-- [ ] 월간 리포트 지표가 조회된다.
-- [ ] 산식이 문서 기준과 일치한다.
-- [ ] 모바일에서 요약 지표가 읽기 쉽다.
-- [ ] VIEWER 권한으로 조회 가능 범위가 제한된다.
-- [ ] 검증 기록이 남았다.
+- [x] 월간 리포트 지표가 조회된다.
+- [x] 산식이 문서 기준과 일치한다.
+- [x] 모바일에서 요약 지표가 읽기 쉽다.
+- [x] VIEWER 권한으로 조회 가능 범위가 제한된다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
-- 명령:
-- 결과:
-- 수동 확인:
-- 남은 리스크:
+- 명령: `corepack.cmd pnpm typecheck`, `corepack.cmd pnpm lint`, `corepack.cmd pnpm build`, `npx.cmd tsx -e "..."`, Chrome DevTools Protocol rendered QA
+- 결과: 통과. `reportDateBasis`별 월 분류, 운행건수, 월/누적 이용 주민, 활동 동행링커, 평균 요금, 총 이동지원비, 만족도, 사고·민원, 상생기금 조성액, 전월 대비 단위 표시가 검증되었다.
+- 수동 확인: `/admin/reports?month=2026-06` 390px 모바일 요약 카드와 1280px 데스크톱 전월 대비 영역 렌더링 확인. 스크린샷: `C:\tmp\together-t052-monthly-report-qa\t052-monthly-report-mobile-summary-after.png`, `C:\tmp\together-t052-monthly-report-qa\t052-monthly-report-desktop-comparison-after.png`
+- 남은 리스크: `.env`, `DATABASE_URL`, 로컬 PostgreSQL 연결이 없어 DB-backed 인증 E2E와 실제 운영 데이터 검증은 후속 DB 연결 티켓에서 수행한다. Chromium 검증 중 `/favicon.ico` 404가 기록되었으나 리포트 기능 오류는 아니다.

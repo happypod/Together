@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P2
-- Status: planned
-- Owner: TBD
+- Status: done
+- Owner: Codex
 - Depends on: T-052
 - Area: report, frontend
 - Work type: report
 - Target surface: admin-desktop, report
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -51,7 +51,7 @@
 ## 정합성
 
 - [x] Full 1차 MVP 이후 확장 기능이다.
-- [x] `design_style_guide.md`의 밝고 명확한 보고서 기준을 따른다.
+- [x] `design_style_guide.md`에 맞고 명확한 보고서 기준을 따른다.
 - [x] PDF 자동화는 P2-001로 분리한다.
 
 ## 모델별 지시
@@ -66,7 +66,7 @@
 
 ### Backend
 
-- 별도 집계보다 getMonthlyReport 결과 재사용을 우선한다.
+- 별도 집계보다 `getMonthlyReport` 결과 재사용을 우선한다.
 
 ### Frontend
 
@@ -82,24 +82,38 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: printable report
-- API/Action: getMonthlyReport
+- 구현 파일 또는 모듈: `src/app/admin/reports/print/page.tsx`, `src/app/admin/reports/print/print-report-actions.tsx`, `src/app/globals.css`, `src/app/admin/reports/page.tsx`
+- API/Action: `getMonthlyReport`
 - DB/Migration: 해당 없음
-- UI/Route: 인쇄용 보고서
+- UI/Route: `/admin/reports/print?month=YYYY-MM`, `/admin/reports` 인쇄용 보고서 진입 링크
 - AuditLog: 해당 없음
-- 설정값: reportDateBasis
+- 설정값: `reportDateBasis`
 
 ## 완료 기준
 
-- [ ] 인쇄 미리보기에서 보고서가 깨지지 않는다.
-- [ ] 개인정보가 최소화되어 표시된다.
-- [ ] 월간 리포트 수치와 일치한다.
-- [ ] PDF 자동화를 구현하지 않는다.
-- [ ] 검증 기록이 남았다.
+- [x] 인쇄 미리보기에서 보고서가 깨지지 않는다.
+- [x] 개인정보가 최소화되어 표시된다.
+- [x] 월간 리포트 수치와 일치한다.
+- [x] PDF 자동화를 구현하지 않는다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
+  - `corepack.cmd pnpm typecheck`
+  - `corepack.cmd pnpm lint`
+  - `corepack.cmd pnpm build`
+  - `curl.exe -4 -I http://localhost:3000/admin/reports/print?month=2026-06`
+  - Chrome CDP 렌더링 검증: `/admin/reports?month=2026-06` 링크 진입, `/admin/reports/print?month=2026-06` 데스크톱/모바일/print media 캡처, 인쇄 버튼 호출 확인
 - 결과:
+  - typecheck/lint/build 통과
+  - `/admin/reports/print?month=2026-06` HTTP 200
+  - print media에서 `.topbar`, `.bottom-nav`, `.print-report-toolbar` 숨김 확인
+  - 전화번호 패턴, preview resident/linker 내부 ID 노출 없음
+  - PDF 자동화 기능은 구현하지 않고 브라우저 인쇄 버튼만 제공
 - 수동 확인:
-- 남은 리스크:
+  - `.verification/t056-print-report-qa/t056-print-screen-desktop.png`
+  - `.verification/t056-print-report-qa/t056-print-screen-mobile-viewport.png`
+  - `.verification/t056-print-report-qa/t056-print-media-a4.png`
+- 잔여 리스크:
+  - 현재 검증은 `DATABASE_URL` 없는 미리보기 데이터 기준이다. DB 연동 후 인증 사용자별 실데이터 수치 일치성은 후속 통합 DB 환경에서 재확인한다.

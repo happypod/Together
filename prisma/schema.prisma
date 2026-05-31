@@ -89,6 +89,7 @@ enum AuditAction {
   ASSIGN
   UNASSIGN
   EXPORT_CSV
+  PDF_EXPORT
   UPLOAD_FILE
   LOGIN
   LOGOUT
@@ -131,6 +132,25 @@ enum CommunityFundType {
   SUPPORT_RECORD
 }
 
+enum JobConsultationTargetType {
+  LINKER
+  RESIDENT
+}
+
+enum JobConsultationStatus {
+  REQUESTED
+  IN_PROGRESS
+  CONNECTED
+  CLOSED
+}
+
+enum MouStatus {
+  ACTIVE
+  RENEWAL_DUE
+  EXPIRED
+  TERMINATED
+}
+
 enum FileType {
   RECEIPT
   CONSENT
@@ -157,6 +177,8 @@ model User {
   createdMobileTokens MobileFormToken[] @relation("MobileTokenCreatedBy")
   updatedSettings AppSetting[]      @relation("SettingUpdatedBy")
   createdContacts ContactLog[]      @relation("ContactCreatedBy")
+  createdJobConsultations JobConsultation[] @relation("JobConsultationCreatedBy")
+  createdMouRecords MouRecord[]     @relation("MouRecordCreatedBy")
   auditLogs       AuditLog[]
 
   @@index([role])
@@ -177,6 +199,7 @@ model Resident {
   requests       MobilityRequest[]
   groupMembers   MobilityGroupMember[]
   surveys        SatisfactionSurvey[]
+  jobConsultations JobConsultation[]
 
   @@index([villageName])
   @@index([phone])
@@ -289,6 +312,7 @@ model Linker {
   deletedAt                  DateTime?
 
   groups                     MobilityGroup[]
+  jobConsultations           JobConsultation[]
 
   @@index([villageName])
   @@index([phone])
@@ -366,13 +390,15 @@ model SatisfactionSurvey {
   id                   String        @id @default(uuid()) @db.Uuid
   groupId              String        @db.Uuid
   residentId           String?       @db.Uuid
+  emotionalRecovery    Int?
   userSatisfaction     Int
-  linkerSatisfaction   Int
-  taxiSatisfaction     Int
-  costBurdenFeeling    Int
+  linkerSatisfaction   Int?
+  taxiSatisfaction     Int?
+  costBurdenFeeling    Int?
   reuseIntent          Int
   inconvenience        String?
   improvementRequest   String?
+  collectedVia         String        @default("operator")
   hasIncident          Boolean       @default(false)
   hasComplaint         Boolean       @default(false)
   issueTypes           String[]
@@ -419,6 +445,55 @@ model CommunityFund {
   @@index([month])
   @@index([fundType])
   @@index([groupId])
+}
+
+model JobConsultation {
+  id                String                    @id @default(uuid()) @db.Uuid
+  targetType        JobConsultationTargetType
+  linkerId          String?                   @db.Uuid
+  residentId        String?                   @db.Uuid
+  field             String
+  status            JobConsultationStatus     @default(REQUESTED)
+  consultedAt       DateTime                  @db.Date
+  organization      String?
+  supportSummary    String?
+  createdByUserId   String                    @db.Uuid
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  linker            Linker?                   @relation(fields: [linkerId], references: [id])
+  resident          Resident?                 @relation(fields: [residentId], references: [id])
+  createdBy         User                      @relation("JobConsultationCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([consultedAt])
+  @@index([targetType])
+  @@index([status])
+  @@index([linkerId])
+  @@index([residentId])
+  @@index([createdByUserId])
+}
+
+model MouRecord {
+  id                String      @id @default(uuid()) @db.Uuid
+  organizationName  String
+  partnerType       String?
+  signedAt          DateTime    @db.Date
+  startAt           DateTime?   @db.Date
+  endAt             DateTime?   @db.Date
+  status            MouStatus   @default(ACTIVE)
+  scopeSummary      String?
+  documentUrl       String?
+  documentLabel     String?
+  createdByUserId   String      @db.Uuid
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  createdBy         User        @relation("MouRecordCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([signedAt])
+  @@index([status])
+  @@index([organizationName])
+  @@index([createdByUserId])
 }
 
 model MonthlyReport {

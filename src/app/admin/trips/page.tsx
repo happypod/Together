@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { AccessDeniedPanel } from "@/components/layout/access-denied-panel";
 import { hasPermission } from "@/domain/auth/permissions";
 import { TripOperationWorkspace } from "@/features/trip-operations/trip-operation-workspace";
 import { getCurrentUser } from "@/server/auth/session";
@@ -15,6 +16,11 @@ import {
   type TripGroupFilters,
   type TripGroupListItem,
 } from "@/server/trips/trip-operation-service";
+import {
+  listGroupSurveySummaries,
+  previewSurveySummaries,
+  type GroupSurveySummary,
+} from "@/server/surveys/satisfaction-survey-service";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +64,7 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
   const canAssignLinker = hasPermission(user, "group:write");
   const canTaxiWrite = hasPermission(user, "taxi:write");
   const canTripWrite = hasPermission(user, "trip:write");
+  const canIncidentWrite = hasPermission(user, "incident:write");
   const canReadTrips =
     hasPermission(user, "trip:read") || hasPermission(user, "taxi:read") || canAssignLinker;
 
@@ -67,6 +74,8 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
   let notice = user
     ? "미리보기 운행 데이터가 표시됩니다."
     : "로그인 후 실제 정보를 저장할 수 있습니다.";
+
+  let surveySummaries: Record<string, GroupSurveySummary> = previewSurveySummaries;
 
   if (user && (canReadLinkers || canReadTrips)) {
     try {
@@ -82,7 +91,16 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
     } catch {
       notice = "미리보기 운행 데이터가 표시됩니다.";
     }
+
+    try {
+      surveySummaries = await listGroupSurveySummaries(groups.map((group) => group.id));
+    } catch {
+      surveySummaries = previewSurveySummaries;
+    }
   }
+
+  const canSubmitSurvey = canTripWrite;
+  const canIssueMobileLink = hasPermission(user, "mobile-token:write");
 
   return (
     <AppShell currentHref="/admin/trips">
@@ -98,17 +116,25 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
             </p>
           </div>
         </section>
-        <TripOperationWorkspace
-          canAssignLinker={canAssignLinker}
-          canManageLinkers={canManageLinkers}
-          canTaxiWrite={canTaxiWrite}
-          canTripWrite={canTripWrite}
-          filters={filters}
-          groups={groups}
-          linkerOptions={linkerOptions}
-          linkers={linkers}
-          notice={notice}
-        />
+        {user && !canReadLinkers && !canReadTrips ? (
+          <AccessDeniedPanel description="이 역할은 동행링커와 운행 정보를 볼 수 없습니다. 필요한 경우 운영 책임자에게 권한을 확인해 주세요." />
+        ) : (
+          <TripOperationWorkspace
+            canAssignLinker={canAssignLinker}
+            canIncidentWrite={canIncidentWrite}
+            canIssueMobileLink={canIssueMobileLink}
+            canManageLinkers={canManageLinkers}
+            canSubmitSurvey={canSubmitSurvey}
+            canTaxiWrite={canTaxiWrite}
+            canTripWrite={canTripWrite}
+            filters={filters}
+            groups={groups}
+            linkerOptions={linkerOptions}
+            linkers={linkers}
+            notice={notice}
+            surveySummaries={surveySummaries}
+          />
+        )}
       </main>
     </AppShell>
   );

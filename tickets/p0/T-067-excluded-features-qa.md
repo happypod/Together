@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P0
-- Status: planned
-- Owner: TBD
+- Status: done
+- Owner: Codex
 - Depends on: all P0 UI
 - Area: qa, product
 - Work type: qa
 - Target surface: admin-desktop, admin-mobile, mobile-link, api
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -37,7 +37,8 @@ P0는 내부 운영관리 핵심 흐름에 집중해야 한다. 제외 기능이
 - 기사 전용 앱 부재 검증
 - AI 경로 최적화 부재 검증
 - 의료상담, 전문 이송, 건강 민감정보 수집 부재 검증
-- PDF 자동화 부재 검증
+- P0 범위에서 PDF 자동화 부재 검증
+- P2-001 이후 승인된 내부 관리자 CSV/PDF export route는 인증, POST 전용, GET 405, no-store 조건으로만 허용
 
 ## 제외
 
@@ -51,7 +52,7 @@ P0는 내부 운영관리 핵심 흐름에 집중해야 한다. 제외 기능이
 - [x] P0 UI와 API 전체가 검증 대상임을 확인했다.
 - [x] 기능뿐 아니라 문구 암시도 검증 대상임을 확인했다.
 - [x] 모바일 링크가 공개 앱으로 확장되지 않아야 함을 확인했다.
-- [x] PDF 자동화는 P2로 유지한다.
+- [x] P0의 PDF 자동화 제외와 P2-001 내부 관리자 PDF 출력 자동화 허용 기준을 분리했다.
 
 ## 정합성
 
@@ -89,24 +90,49 @@ P0는 내부 운영관리 핵심 흐름에 집중해야 한다. 제외 기능이
 
 ## 구현
 
-- 구현 파일 또는 모듈: excluded feature checklist
-- API/Action: all P0 actions
-- DB/Migration: all P0 models
-- UI/Route: all P0 routes
+- 구현 파일 또는 모듈: `scripts/verify-excluded-features.ts`, `.env.example`
+- API/Action: all P0 Server Actions and absence of public route-handler APIs except approved internal admin report export routes
+- DB/Migration: all P0 Prisma models scanned for excluded feature fields
+- UI/Route: all P0 routes, `/m/[token]` limited mobile-link route
 - AuditLog: 해당 없음
 - 설정값: env, AppSetting
 
 ## 완료 기준
 
-- [ ] 제외 기능이 코드와 UI에 없다.
-- [ ] 제외 기능 관련 환경변수가 없다.
-- [ ] 제외 기능을 암시하는 문구가 없다.
-- [ ] 모바일 링크가 공개 앱처럼 동작하지 않는다.
-- [ ] 검증 기록이 남았다.
+- [x] 제외 기능이 코드와 UI에 없다.
+- [x] 제외 기능 관련 환경변수가 없다.
+- [x] 제외 기능을 암시하는 문구가 없다.
+- [x] 모바일 링크가 공개 앱처럼 동작하지 않는다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
 - 명령:
+  - `npx.cmd tsx scripts\verify-excluded-features.ts`
+  - `npx.cmd tsx scripts\verify-forbidden-operational-language.ts`
+  - `npx.cmd tsx scripts\verify-privacy-rules.ts`
+  - `npx.cmd tsx scripts\verify-rbac-access.ts`
+  - `npx.cmd tsx scripts\verify-settlement-formulas.ts`
+  - `npx.cmd tsx scripts\verify-state-transitions.ts`
+  - `corepack.cmd pnpm typecheck`
+  - `corepack.cmd pnpm lint`
+  - `corepack.cmd pnpm build`
+  - `$env:DATABASE_URL='postgresql://user:password@localhost:5432/together'; corepack.cmd pnpm db:validate`
+  - `node --check prisma\seed.mjs`
+  - `curl.exe -4 -I http://localhost:3000/admin/trips`
+  - `curl.exe -4 -I http://localhost:3000/m/t067-invalid-token`
 - 결과:
+  - `excluded-features-ok`
+  - P2 승인 내부 route handler인 `/admin/reports/export`, `/admin/reports/pdf`는 `requireCurrentUser`, POST workflow, GET 405, no-store 조건을 충족함
+  - 금지 표현, 개인정보, 권한, 정산 산식, 상태 전이 검증 통과
+  - typecheck, lint, production build 통과
+  - Prisma schema validate와 seed syntax check 통과
+  - `/admin/trips`, `/m/t067-invalid-token` HTTP 200
+  - `.env.example`의 앱명은 `백천마을 동행이동 OS`로 정정
 - 수동 확인:
+  - `.verification/t067-trips-390x900.png`
+  - `.verification/t067-trips-1280x900.png`
+  - `.verification/t067-mobile-link-390x900.png`
+  - 관리자 화면은 내부 운영 메뉴만 노출하고, 모바일 링크는 제한 입력/오류 표면만 제공한다.
 - 남은 리스크:
+  - `.env`와 실제 PostgreSQL 연결이 없어 DB 커밋 기반 인증 E2E는 후속 DB 연결 티켓에서 검증한다.

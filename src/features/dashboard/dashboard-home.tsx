@@ -1,7 +1,13 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { dashboardMetrics, settlementRows, todayTasks } from "@/lib/dashboard-data";
+import { type DashboardSummaryView } from "@/server/settlements/settlement-service";
 
-export function DashboardHome() {
+type DashboardHomeProps = {
+  summary: DashboardSummaryView;
+  notice?: string;
+  canManageUsers?: boolean;
+};
+
+export function DashboardHome({ canManageUsers = false, summary, notice }: DashboardHomeProps) {
   return (
     <AppShell>
       <main className="page">
@@ -10,21 +16,32 @@ export function DashboardHome() {
             <p className="eyebrow">운영 대시보드</p>
             <h1 id="dashboard-title">오늘 접수와 이동 현황</h1>
             <p className="lead">
-              주민 신청, 공동예약, 동행링커 배정, 귀가 확인을 한 화면에서 점검합니다.
+              운영 현황을 한 화면에서 점검합니다.
             </p>
           </div>
           <div className="heading-actions" aria-label="주요 작업">
-            <button className="primary-action" type="button">
+            <a className="primary-action" href="/admin/requests">
               주민 등록
-            </button>
-            <button className="secondary-action" type="button">
+            </a>
+            <a className="secondary-action" href="/admin/groups">
               공동예약
-            </button>
+            </a>
+            {canManageUsers ? (
+              <a className="secondary-action" href="/admin/users">
+                사용자 관리
+              </a>
+            ) : null}
           </div>
         </section>
 
+        {notice ? (
+          <p className="request-notice" role="status">
+            {notice}
+          </p>
+        ) : null}
+
         <section className="kpi-grid" aria-label="핵심 현황">
-          {dashboardMetrics.map((metric) => (
+          {summary.metrics.map((metric) => (
             <article className="kpi-card" key={metric.label}>
               <p>{metric.label}</p>
               <strong>{metric.value}</strong>
@@ -40,7 +57,7 @@ export function DashboardHome() {
               <h2 id="today-flow-title">현장 운영 체크</h2>
             </div>
             <ol className="task-list">
-              {todayTasks.map((task) => (
+              {summary.tasks.map((task) => (
                 <li className="task-card" key={task.title}>
                   <span className={`task-state ${task.tone}`}>{task.state}</span>
                   <div>
@@ -58,7 +75,7 @@ export function DashboardHome() {
               <h2 id="settlement-title">이번 달 기준</h2>
             </div>
             <div className="settlement-list">
-              {settlementRows.map((row) => (
+              {summary.settlementRows.map((row) => (
                 <div className="settlement-row" key={row.label}>
                   <span>{row.label}</span>
                   <strong>{row.value}</strong>

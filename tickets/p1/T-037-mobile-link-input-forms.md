@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-003, T-005, T-007
 - Area: frontend, backend, mobile
 - Work type: feature
 - Target surface: mobile-link, admin-mobile, api
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -82,24 +82,32 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: mobile forms
-- API/Action: createMobileFormToken, submitMobileForm
+- 구현 파일 또는 모듈: `src/app/m/[token]`, `src/server/mobile-forms/token-service.ts`, `src/server/trips/trip-operation-service.ts`, `src/server/residents/resident-request-service.ts`
+- API/Action: `createMobileFormToken`, `submitOperationalMobileForm`, `issueRequestIntakeLinkAction`, `tripOperationAction(intent=issueMobileLink)`
 - DB/Migration: MobileFormToken 사용
-- UI/Route: 모바일 토큰 입력 라우트
+- UI/Route: `/m/[token]`, `/admin/requests`, `/admin/trips`
 - AuditLog: TOKEN_CREATE, TOKEN_SUBMIT, TOKEN_REVOKE
 - 설정값: mobileTokenTtlHours
 
 ## 완료 기준
 
-- [ ] scope별 모바일 입력폼이 동작한다.
-- [ ] 만료/폐기/사용 완료 상태가 명확히 표시된다.
-- [ ] scope 밖 필드 수정이 차단된다.
-- [ ] 360px에서 핵심 입력을 완료할 수 있다.
-- [ ] 검증 기록이 남았다.
+- [x] scope별 모바일 입력폼이 동작한다.
+- [x] 만료/폐기/사용 완료 상태가 명확히 표시된다.
+- [x] scope 밖 필드 수정이 차단된다.
+- [x] 360px에서 핵심 입력을 완료할 수 있다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
-- 명령:
-- 결과:
-- 수동 확인:
-- 남은 리스크:
+- 명령: `corepack.cmd pnpm typecheck`
+- 결과: 통과. TypeScript 오류 없음.
+- 명령: `corepack.cmd pnpm lint`
+- 결과: 통과. ESLint 오류 없음.
+- 명령: `corepack.cmd pnpm build`
+- 결과: 통과. `/m/[token]`, `/admin/requests`, `/admin/trips` 빌드 포함.
+- 명령: `npx.cmd tsx -e "import { getDisallowedMobileFields } ..."`
+- 결과: REQUEST_INTAKE, TRIP_CHECK, TAXI_CONFIRM scope 밖 필드가 차단 목록으로 반환됨을 확인했다.
+- 수동 확인: 390x900 헤드리스 Chrome CDP에서 `/admin/requests` 모바일 신청 링크 패널, `/admin/trips` 운행별 모바일 링크 발급 카드 4종, `/m/t037-invalid-token` 오류 상태 화면을 확인했다.
+- 수동 확인: `/admin/trips` 모바일 링크 발급 섹션을 열어 TRIP_CHECK, RETURN_CONFIRM, TAXI_CONFIRM, SURVEY_SUBMIT 카드가 큰 버튼과 한 줄 흐름으로 표시됨을 확인했다.
+- 증거: `C:\tmp\together-t037-mobile-link-qa\t037-requests-mobile-link-panel.png`, `C:\tmp\together-t037-mobile-link-qa\t037-trips-mobile-link-forms-scrolled.png`, `C:\tmp\together-t037-mobile-link-qa\t037-invalid-token-mobile.png`
+- 남은 리스크: 실제 MobileFormToken 발급, 만료, 폐기, 사용 완료 전환과 DB 저장 E2E는 `.env`, `DATABASE_URL`, PostgreSQL 연결 준비 후 후속 검증한다.

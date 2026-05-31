@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { AccessDeniedPanel } from "@/components/layout/access-denied-panel";
 import { hasPermission } from "@/domain/auth/permissions";
 import { ResidentRequestWorkspace } from "@/features/resident-requests/resident-request-workspace";
 import { getCurrentUser } from "@/server/auth/session";
@@ -65,6 +66,7 @@ export default async function ResidentRequestsPage({ searchParams }: RequestsPag
   }
   const canRead = hasPermission(user, "request:read");
   const canWrite = hasPermission(user, "request:write");
+  const canIssueMobileLink = hasPermission(user, "mobile-token:write");
   let settings = DEFAULT_OPERATING_SETTINGS;
   let residents: ResidentOption[] = [];
   let requests = previewRequests;
@@ -102,14 +104,19 @@ export default async function ResidentRequestsPage({ searchParams }: RequestsPag
             </p>
           </div>
         </section>
-        <ResidentRequestWorkspace
-          canWrite={canWrite}
-          filters={filters}
-          notice={notice}
-          requests={requests}
-          residents={residents}
-          settings={settings}
-        />
+        {user && !canRead ? (
+          <AccessDeniedPanel description="이 역할은 주민 신청 정보를 볼 수 없습니다. 필요한 경우 운영 책임자에게 권한을 확인해 주세요." />
+        ) : (
+          <ResidentRequestWorkspace
+            canIssueMobileLink={canIssueMobileLink}
+            canWrite={canWrite}
+            filters={filters}
+            notice={notice}
+            requests={requests}
+            residents={residents}
+            settings={settings}
+          />
+        )}
       </main>
     </AppShell>
   );

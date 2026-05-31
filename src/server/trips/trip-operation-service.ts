@@ -11,13 +11,24 @@ import {
   type MobilityStatus,
   type UserRole,
 } from "@/domain/definitions";
-import { maskPhone } from "@/domain/privacy";
+import { assertNoForbiddenSensitiveInfo, maskPhone } from "@/domain/privacy";
+import { describeNextMobilityStatusActions } from "@/domain/status";
 import { writeAuditLog } from "@/server/audit/audit-log";
 import { prisma } from "@/server/db/prisma";
+import {
+  recordIncidentReportTx,
+  toIncidentReportListItem,
+  type IncidentReportListItem,
+} from "@/server/incidents/incident-report-service";
 import {
   assertMobileFieldsAllowed,
   validateMobileFormToken,
 } from "@/server/mobile-forms/token-service";
+import { createResidentRequestTx } from "@/server/residents/resident-request-service";
+import {
+  parseParticipantSurveyForm,
+  recordParticipantSurveyTx,
+} from "@/server/surveys/satisfaction-survey-service";
 
 export type LinkerListFilters = {
   query?: string;
@@ -126,7 +137,9 @@ export type TripGroupListItem = {
   members: TripMemberItem[];
   taxiReservation: TaxiReservationItem | null;
   tripLog: TripLogItem | null;
+  incidentReports: IncidentReportListItem[];
   availableTripSteps: TripStep[];
+  nextActionLabel: string;
 };
 
 export type CreateLinkerInput = {
@@ -195,7 +208,9 @@ const operationalRoles = new Set<UserRole>([
   "COUNCIL_OPERATOR",
 ]);
 const taxiManagedStatuses = new Set<MobilityStatus>(["LINKER_ASSIGNED", "TAXI_REQUESTED"]);
+const taxiConfirmableStatuses = new Set<MobilityStatus>(["TAXI_REQUESTED", "TAXI_CONFIRMED"]);
 const activeTripStatuses = new Set<MobilityStatus>(["TAXI_CONFIRMED", "IN_PROGRESS"]);
+const returnConfirmableStatuses = new Set<MobilityStatus>(["IN_PROGRESS", "RETURN_CONFIRMED"]);
 
 const tripStepLabels: Record<TripStep, string> = {
   linkerBoarded: "동행링커 탑승",
@@ -388,6 +403,15 @@ type TripGroupRecord = Prisma.MobilityGroupGetPayload<{
     };
     taxiReservation: true;
     tripLogs: true;
+    incidentReports: {
+      include: {
+        reportedBy: {
+          select: {
+            name: true;
+          };
+        };
+      };
+    };
   };
 }>;
 
@@ -412,6 +436,7 @@ function getLatestTripLog(group: Pick<TripGroupRecord, "tripLogs">) {
 function toTripGroupItem(group: TripGroupRecord): TripGroupListItem {
   const latestTripLog = getLatestTripLog(group);
   const memberCount = countActiveMembers(group);
+  const availableTripSteps = getAvailableTripSteps(group, latestTripLog, memberCount);
 
   return {
     id: group.id,
@@ -472,8 +497,29 @@ function toTripGroupItem(group: TripGroupRecord): TripGroupListItem {
           notes: latestTripLog.notes ?? "",
         }
       : null,
-    availableTripSteps: getAvailableTripSteps(group, latestTripLog, memberCount),
+    incidentReports: group.incidentReports.map(toIncidentReportListItem),
+    availableTripSteps,
+    nextActionLabel: getTripNextActionLabel(group.status, availableTripSteps),
   };
+}
+
+export function getTripNextActionLabel(status: MobilityStatus, availableSteps: TripStep[] = []) {
+  if (availableSteps.length > 0) {
+    return tripStepLabels[availableSteps[0]];
+  }
+  if (status === "LINKER_RECRUITING") {
+    return "동행링커 배정";
+  }
+  if (status === "LINKER_ASSIGNED") {
+    return "택시 예약요청";
+  }
+  if (status === "TAXI_REQUESTED") {
+    return "택시 예약확정";
+  }
+  if (status === "IN_PROGRESS") {
+    return "귀가 확인";
+  }
+  return describeNextMobilityStatusActions(status);
 }
 
 function getAvailableTripSteps(
@@ -521,6 +567,12 @@ async function findGroupForTrip(tx: Prisma.TransactionClient, groupId: string) {
       },
       taxiReservation: true,
       tripLogs: true,
+      incidentReports: {
+        orderBy: [{ occurredAt: "desc" }, { createdAt: "desc" }],
+        include: {
+          reportedBy: { select: { name: true } },
+        },
+      },
     },
   });
   if (!group) {
@@ -566,6 +618,50 @@ async function getOrCreateTripLog(
   });
 }
 
+async function syncActiveMemberRequestsStatus(
+  tx: Prisma.TransactionClient,
+  groupId: string,
+  status: MobilityStatus,
+) {
+  await tx.mobilityRequest.updateMany({
+    where: {
+      groupMembers: {
+        some: {
+          groupId,
+          memberStatus: "ACTIVE",
+        },
+      },
+    },
+    data: { status },
+  });
+}
+
+async function writeGroupStatusChangeAudit(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  input: {
+    groupId: string;
+    beforeStatus: MobilityStatus;
+    afterStatus: MobilityStatus;
+    note: string;
+    extraAfterValue?: Record<string, unknown>;
+  },
+) {
+  await writeAuditLog(tx, {
+    userId,
+    action: "STATUS_CHANGE",
+    targetType: "MobilityGroup",
+    targetId: input.groupId,
+    beforeValue: { status: input.beforeStatus },
+    afterValue: {
+      status: input.afterStatus,
+      syncedActiveRequests: true,
+      ...input.extraAfterValue,
+    },
+    note: input.note,
+  });
+}
+
 async function applyTaxiConfirmation(
   tx: Prisma.TransactionClient,
   user: AuthUser,
@@ -580,7 +676,10 @@ async function applyTaxiConfirmation(
   if (!group) {
     throw new Error("택시 예약을 연결할 그룹을 찾을 수 없습니다.");
   }
-  if (!group.taxiReservation && user.role === "TAXI_PARTNER") {
+  if (!taxiConfirmableStatuses.has(group.status)) {
+    throw new Error("택시요청 단계에서만 예약 확정을 저장할 수 있습니다.");
+  }
+  if (!group.taxiReservation) {
     throw new Error("운영자가 예약요청을 먼저 기록해야 확정할 수 있습니다.");
   }
 
@@ -595,6 +694,11 @@ async function applyTaxiConfirmation(
   const expectedFare = parseNonNegativeInteger("예상요금", input.expectedFare);
   const actualFare = parseNonNegativeInteger("실제요금", input.actualFare);
   const receiptUrl = optionalCleanText(input.receiptUrl, 300);
+  const notes = optionalCleanText(input.notes, 300);
+  assertNoForbiddenSensitiveInfo({
+    "영수증 링크": receiptUrl,
+    "예약 확정 메모": notes,
+  });
 
   const data = {
     partnerManagerName: optionalCleanText(input.partnerManagerName, 40),
@@ -606,7 +710,7 @@ async function applyTaxiConfirmation(
     actualFare,
     receiptAttached: Boolean(input.receiptAttached || receiptUrl),
     receiptUrl,
-    notes: optionalCleanText(input.notes, 300),
+    notes,
   };
 
   const reservation = group.taxiReservation
@@ -627,6 +731,15 @@ async function applyTaxiConfirmation(
       where: { id: group.id },
       data: { status: "TAXI_CONFIRMED" },
     });
+    await syncActiveMemberRequestsStatus(tx, group.id, "TAXI_CONFIRMED");
+    if (group.status !== "TAXI_CONFIRMED") {
+      await writeGroupStatusChangeAudit(tx, user.id, {
+        groupId: group.id,
+        beforeStatus: group.status,
+        afterStatus: "TAXI_CONFIRMED",
+        note: "택시 예약 확정",
+      });
+    }
   }
 
   await writeAuditLog(tx, {
@@ -658,8 +771,10 @@ async function applyTripStep(
   const activeMemberCount = countActiveMembers(group);
   const tripLog = await getOrCreateTripLog(tx, user.id, group);
   const now = new Date();
+  const notes = optionalCleanText(input.notes, 500);
+  assertNoForbiddenSensitiveInfo({ 운행메모: notes });
   const data: Prisma.TripLogUpdateInput = {
-    notes: optionalCleanText(input.notes, 500),
+    notes,
   };
 
   if (step === "linkerBoarded") {
@@ -722,6 +837,14 @@ async function applyTripStep(
       where: { id: group.id },
       data: { status: "IN_PROGRESS" },
     });
+    await syncActiveMemberRequestsStatus(tx, group.id, "IN_PROGRESS");
+    await writeGroupStatusChangeAudit(tx, user.id, {
+      groupId: group.id,
+      beforeStatus: group.status,
+      afterStatus: "IN_PROGRESS",
+      note: "운행 시작",
+      extraAfterValue: { firstStep: step },
+    });
   }
 
   await writeAuditLog(tx, {
@@ -745,12 +868,18 @@ async function applyReturnConfirmation(
   const group = await findGroupForTrip(tx, input.groupId);
   await assertTripWriterForGroup(tx, user, group);
 
+  if (!returnConfirmableStatuses.has(group.status)) {
+    throw new Error("운행중 상태에서만 귀가 확인을 저장할 수 있습니다.");
+  }
+
   const tripLog = await getOrCreateTripLog(tx, user.id, group);
   if (!tripLog.returnStartedAt && !tripLog.allReturnsConfirmedAt) {
     throw new Error("귀가 출발을 먼저 확인해 주세요.");
   }
 
   const now = new Date();
+  const notes = optionalCleanText(input.notes, 500);
+  assertNoForbiddenSensitiveInfo({ 귀가확인메모: notes });
   const activeMembers = group.members.filter((member) => member.memberStatus === "ACTIVE");
   if (activeMembers.length === 0) {
     throw new Error("귀가 확인할 주민이 없습니다.");
@@ -792,24 +921,14 @@ async function applyReturnConfirmation(
       data: {
         status: "RETURN_CONFIRMED",
         allReturnsConfirmedAt: tripLog.allReturnsConfirmedAt ?? now,
-        notes: optionalCleanText(input.notes, 500) ?? tripLog.notes,
+        notes: notes ?? tripLog.notes,
       },
     });
     await tx.mobilityGroup.update({
       where: { id: group.id },
       data: { status: "RETURN_CONFIRMED" },
     });
-    await tx.mobilityRequest.updateMany({
-      where: {
-        groupMembers: {
-          some: {
-            groupId: group.id,
-            memberStatus: "ACTIVE",
-          },
-        },
-      },
-      data: { status: "RETURN_CONFIRMED" },
-    });
+    await syncActiveMemberRequestsStatus(tx, group.id, "RETURN_CONFIRMED");
     if (group.linkerId && !tripLog.allReturnsConfirmedAt) {
       await tx.linker.update({
         where: { id: group.linkerId },
@@ -943,6 +1062,12 @@ export async function listTripGroups(user: AuthUser, filters: TripGroupFilters =
       },
       taxiReservation: true,
       tripLogs: true,
+      incidentReports: {
+        orderBy: [{ occurredAt: "desc" }, { createdAt: "desc" }],
+        include: {
+          reportedBy: { select: { name: true } },
+        },
+      },
     },
   });
 
@@ -969,6 +1094,10 @@ export async function createLinker(user: AuthUser, input: CreateLinkerInput) {
     wantsJobConnection: Boolean(input.wantsJobConnection),
     desiredJobField: optionalCleanText(input.desiredJobField, 80),
   };
+  assertNoForbiddenSensitiveInfo({
+    "민원·사고 이력 요약": data.incidentComplaintHistory,
+    "희망 분야": data.desiredJobField,
+  });
 
   if (assignmentReadyStatuses.has(status) && !isAssignmentReady(data)) {
     throw new Error("활동가능 상태는 교육, 실습, 개인정보보호 서약, 보험 등록이 모두 필요합니다.");
@@ -1029,8 +1158,8 @@ export async function assignLinkerToGroup(user: AuthUser, input: AssignLinkerInp
     if (!group) {
       throw new Error("동행링커를 배정할 그룹을 찾을 수 없습니다.");
     }
-    if (!["GROUP_READY", "LINKER_RECRUITING", "LINKER_ASSIGNED"].includes(group.status)) {
-      throw new Error("그룹확정 또는 링커모집 단계에서만 동행링커를 배정할 수 있습니다.");
+    if (!["LINKER_RECRUITING", "LINKER_ASSIGNED"].includes(group.status)) {
+      throw new Error("동행링커 배정 전 그룹 상태를 링커모집으로 변경해 주세요.");
     }
 
     const linker = await tx.linker.findFirst({
@@ -1050,6 +1179,16 @@ export async function assignLinkerToGroup(user: AuthUser, input: AssignLinkerInp
         status: "LINKER_ASSIGNED",
       },
     });
+    await syncActiveMemberRequestsStatus(tx, group.id, "LINKER_ASSIGNED");
+    if (group.status !== "LINKER_ASSIGNED") {
+      await writeGroupStatusChangeAudit(tx, user.id, {
+        groupId: group.id,
+        beforeStatus: group.status,
+        afterStatus: "LINKER_ASSIGNED",
+        note: "동행링커 배정",
+        extraAfterValue: { linkerId: linker.id },
+      });
+    }
 
     await writeAuditLog(tx, {
       userId: user.id,
@@ -1083,9 +1222,11 @@ export async function requestTaxiReservation(user: AuthUser, input: RequestTaxiR
       throw new Error("링커확정 단계에서만 택시 예약요청을 기록할 수 있습니다.");
     }
 
+    const notes = optionalCleanText(input.notes, 300);
+    assertNoForbiddenSensitiveInfo({ "택시 예약요청 메모": notes });
     const data = {
       partnerManagerName: optionalCleanText(input.partnerManagerName, 40),
-      notes: optionalCleanText(input.notes, 300),
+      notes,
     };
     const reservation = group.taxiReservation
       ? await tx.taxiReservation.update({
@@ -1106,6 +1247,15 @@ export async function requestTaxiReservation(user: AuthUser, input: RequestTaxiR
       where: { id: group.id },
       data: { status: "TAXI_REQUESTED" },
     });
+    await syncActiveMemberRequestsStatus(tx, group.id, "TAXI_REQUESTED");
+    if (group.status !== "TAXI_REQUESTED") {
+      await writeGroupStatusChangeAudit(tx, user.id, {
+        groupId: group.id,
+        beforeStatus: group.status,
+        afterStatus: "TAXI_REQUESTED",
+        note: "택시연합 예약요청",
+      });
+    }
 
     await writeAuditLog(tx, {
       userId: user.id,
@@ -1140,9 +1290,21 @@ function formHasValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim().length > 0;
 }
 
+function formHasIncidentReport(formData: FormData) {
+  return [
+    "incidentType",
+    "incidentOccurredAt",
+    "incidentDescription",
+    "incidentActionTaken",
+  ].some((key) => formHasValue(formData, key));
+}
+
 function extractSubmittedFields(formData: FormData) {
   return [...formData.entries()]
-    .filter(([key, value]) => key !== "token" && String(value).trim().length > 0)
+    .filter(
+      ([key, value]) =>
+        key !== "token" && !key.startsWith("$ACTION_") && String(value).trim().length > 0,
+    )
     .map(([key]) => key);
 }
 
@@ -1204,6 +1366,15 @@ async function applyMobileSubmission(
         });
       }
     }
+    if (formHasIncidentReport(formData)) {
+      await recordIncidentReportTx(tx, tokenUser, {
+        groupId: token.targetId,
+        incidentType: formText(formData, "incidentType"),
+        occurredAt: formText(formData, "incidentOccurredAt"),
+        description: formText(formData, "incidentDescription"),
+        actionTaken: formText(formData, "incidentActionTaken"),
+      });
+    }
   } else if (token.scope === "RETURN_CONFIRM") {
     if (token.targetType === "MobilityGroupMember") {
       const member = await tx.mobilityGroupMember.findUnique({
@@ -1227,6 +1398,39 @@ async function applyMobileSubmission(
     } else {
       throw new Error("귀가 확인 링크의 대상이 올바르지 않습니다.");
     }
+  } else if (token.scope === "SURVEY_SUBMIT") {
+    if (token.targetType !== "MobilityGroup") {
+      throw new Error("만족도 입력 링크의 대상이 올바르지 않습니다.");
+    }
+    await recordParticipantSurveyTx(
+      tx,
+      parseParticipantSurveyForm(formData, {
+        groupId: token.targetId,
+        collectedVia: "mobile",
+      }),
+      token.createdByUserId,
+    );
+  } else if (token.scope === "REQUEST_INTAKE") {
+    if (token.targetType !== "User") {
+      throw new Error("신청 입력 링크의 대상이 올바르지 않습니다.");
+    }
+    await createResidentRequestTx(tx, tokenUser, {
+      residentName: formText(formData, "residentName"),
+      villageName: formText(formData, "villageName"),
+      phone: formText(formData, "phone"),
+      guardianPhone: formText(formData, "guardianPhone"),
+      desiredDate: formText(formData, "desiredDate"),
+      desiredTimeWindow: formText(formData, "desiredTimeWindow"),
+      purpose: formText(formData, "purpose"),
+      origin: formText(formData, "origin"),
+      destination: formText(formData, "destination"),
+      needsCompanion: parseBoolean(formData.get("needsCompanion")),
+      privacyConsent: parseBoolean(formData.get("privacyConsent")),
+      thirdPartyConsent: parseBoolean(formData.get("thirdPartyConsent")),
+      sensitiveInfoNotCollected: parseBoolean(formData.get("sensitiveInfoNotCollected")),
+    });
+  } else {
+    throw new Error("이 모바일 링크 범위는 아직 저장 화면이 연결되지 않았습니다.");
   }
 }
 
@@ -1369,7 +1573,21 @@ export const previewTripGroups: TripGroupListItem[] = [
       notes: "시연용 예약",
     },
     tripLog: null,
+    incidentReports: [
+      {
+        id: "preview-incident-1",
+        groupId: "preview-trip-group",
+        incidentType: "DELAY",
+        incidentTypeLabel: "지연",
+        occurredAt: "2026. 6. 3. 오전 9:20:00",
+        description: "택시 도착이 10분 지연되어 보호자에게 안내했습니다.",
+        actionTaken: "운영자가 전화 안내 후 출발 시간을 조정했습니다.",
+        reportedByName: "시연 운영자",
+        createdAt: "2026. 6. 3. 오전 9:25:00",
+      },
+    ],
     availableTripSteps: ["linkerBoarded"],
+    nextActionLabel: "동행링커 탑승",
   },
 ];
 

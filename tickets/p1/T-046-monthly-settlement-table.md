@@ -3,14 +3,14 @@
 ## 메타
 
 - Priority: P1
-- Status: planned
+- Status: done
 - Owner: TBD
 - Depends on: T-006
 - Area: finance, report, frontend
 - Work type: report
 - Target surface: admin-desktop, admin-mobile, report
 - 디자인 기준: `design_style_guide.md` 적용
-- Updated at: 2026-05-30
+- Updated at: 2026-05-31
 
 ## 목표
 
@@ -82,24 +82,24 @@
 
 ## 구현
 
-- 구현 파일 또는 모듈: monthly settlements
-- API/Action: listMonthlySettlements
+- 구현 파일 또는 모듈: `src/server/settlements/settlement-service.ts`, `src/features/settlements/settlement-workspace.tsx`, `src/app/admin/settlements/page.tsx`, `src/app/globals.css`
+- API/Action: `listMonthlySettlements`, `summarizeMonthlySettlementRows`
 - DB/Migration: 해당 없음
-- UI/Route: 월별 정산표
+- UI/Route: `/admin/settlements?tab=monthly`
 - AuditLog: 조회는 해당 없음, 내보내기 시 T-055
 - 설정값: reportDateBasis
 
 ## 완료 기준
 
-- [ ] 월별 정산표가 조회된다.
-- [ ] 합계와 필터가 정확하다.
-- [ ] 영수증 누락을 확인할 수 있다.
-- [ ] 모바일에서 요약 카드가 읽기 쉽다.
-- [ ] 검증 기록이 남았다.
+- [x] 월별 정산표가 조회된다.
+- [x] 합계와 필터가 정확하다.
+- [x] 영수증 누락을 확인할 수 있다.
+- [x] 모바일에서 요약 카드가 읽기 쉽다.
+- [x] 검증 기록이 남았다.
 
 ## 검증 기록
 
-- 명령:
-- 결과:
-- 수동 확인:
-- 남은 리스크:
+- 명령: `corepack.cmd pnpm typecheck`, `corepack.cmd pnpm lint`, `corepack.cmd pnpm build`, `npx.cmd tsx -e "..."`, Chrome DevTools Protocol rendered QA
+- 결과: 통과. 월 기준 필터, 정산완료/미정산 필터, 영수증 상태 필터, 총 택시요금/주민 총 분담/앵커 지원금/상생기금 합계가 검증되었다.
+- 수동 확인: `/admin/settlements?tab=monthly` 390px 모바일 카드와 1280px 데스크톱 표 렌더링 확인. 스크린샷: `C:\tmp\together-t046-monthly-settlement-qa\t046-monthly-settlement-mobile.png`, `C:\tmp\together-t046-monthly-settlement-qa\t046-monthly-settlement-mobile-cards.png`, `C:\tmp\together-t046-monthly-settlement-qa\t046-monthly-settlement-desktop.png`
+- 남은 리스크: `.env`, `DATABASE_URL`, 로컬 PostgreSQL 연결이 없어 DB-backed 인증 E2E와 실제 데이터 마이그레이션 검증은 후속 DB 연결 티켓에서 수행한다.

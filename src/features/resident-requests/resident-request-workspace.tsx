@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   createResidentRequestAction,
+  issueRequestIntakeLinkAction,
   type ResidentRequestFormState,
 } from "@/app/admin/requests/actions";
 import {
@@ -11,6 +12,7 @@ import {
   MOBILITY_STATUS_LABELS,
   MOBILITY_STATUSES,
 } from "@/domain/definitions";
+import { PRIVACY_INPUT_GUIDANCE } from "@/domain/privacy";
 import {
   type ResidentOption,
   type ResidentRequestListFilters,
@@ -24,6 +26,7 @@ type ResidentRequestWorkspaceProps = {
   requests: ResidentRequestListItem[];
   filters: ResidentRequestListFilters;
   canWrite: boolean;
+  canIssueMobileLink: boolean;
   notice?: string;
 };
 
@@ -38,10 +41,15 @@ export function ResidentRequestWorkspace({
   requests,
   filters,
   canWrite,
+  canIssueMobileLink,
   notice,
 }: ResidentRequestWorkspaceProps) {
   const [state, formAction, pending] = useActionState(
     createResidentRequestAction,
+    initialState,
+  );
+  const [linkState, linkFormAction, linkPending] = useActionState(
+    issueRequestIntakeLinkAction,
     initialState,
   );
 
@@ -58,7 +66,26 @@ export function ResidentRequestWorkspace({
           <p className="eyebrow">신청 등록</p>
           <h2 id="request-create-title">주민과 이동 신청</h2>
         </div>
+        <form action={linkFormAction} className="request-mobile-link-form">
+          <div>
+            <strong>모바일 신청 링크</strong>
+            <span>현장에서 받은 링크로 주민과 이동 신청을 1회 입력합니다.</span>
+          </div>
+          {linkState.message ? (
+            <p className={linkState.ok ? "form-message success" : "form-message"} role="status">
+              {linkState.message}
+            </p>
+          ) : null}
+          <button
+            className="secondary-action"
+            disabled={!canIssueMobileLink || linkPending}
+            type="submit"
+          >
+            {linkPending ? "링크 만드는 중" : canIssueMobileLink ? "모바일 신청 링크 만들기" : "권한 필요"}
+          </button>
+        </form>
         <form action={formAction} className="request-form">
+          <p className="privacy-guidance">{PRIVACY_INPUT_GUIDANCE}</p>
           <fieldset>
             <legend>주민 정보</legend>
             <label>
@@ -102,7 +129,7 @@ export function ResidentRequestWorkspace({
               <textarea
                 maxLength={300}
                 name="memo"
-                placeholder="이동 지원에 필요한 운영 메모만 적어 주세요."
+                placeholder="이동 지원에 필요한 내용만 적어 주세요."
                 rows={3}
               />
             </label>
@@ -205,7 +232,7 @@ export function ResidentRequestWorkspace({
             <input
               defaultValue={filters.query ?? ""}
               name="query"
-              placeholder="주민명, 연락처, 출발지, 목적지"
+              placeholder="주민명, 마을, 출발지, 목적지"
             />
           </label>
           <label>
@@ -261,7 +288,9 @@ export function ResidentRequestWorkspace({
                       {request.villageName} · {request.phoneMasked}
                     </span>
                   </div>
-                  <mark>{request.statusLabel}</mark>
+                  <mark className="status-badge" data-status={request.status}>
+                    {request.statusLabel}
+                  </mark>
                 </div>
                 <dl className="request-card-details">
                   <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Slice } from "@/components/ui/slice";
 import {
   groupOperationAction,
   type GroupOperationFormState,
@@ -9,6 +10,7 @@ import {
   MOBILITY_STATUS_LABELS,
   MOBILITY_STATUSES,
 } from "@/domain/definitions";
+import { PRIVACY_INPUT_GUIDANCE } from "@/domain/privacy";
 import {
   type GroupCandidateRequest,
   type MobilityGroupListFilters,
@@ -52,6 +54,7 @@ export function MobilityGroupWorkspace({
           {state.message}
         </p>
       ) : null}
+      <p className="privacy-guidance">{PRIVACY_INPUT_GUIDANCE}</p>
 
       <section className="group-panel" aria-labelledby="group-create-title">
         <div className="section-header">
@@ -102,7 +105,7 @@ export function MobilityGroupWorkspace({
             <textarea
               maxLength={300}
               name="notes"
-              placeholder="자동 추천 없이 운영자가 판단한 편성 사유만 적어 주세요."
+              placeholder="운영자가 판단한 편성 사유만 짧게 적어 주세요."
               rows={3}
             />
           </label>
@@ -201,7 +204,9 @@ function GroupCard({
             {group.serviceDate} · {group.timeWindow} · {group.destinationSummary}
           </span>
         </div>
-        <mark>{group.statusLabel}</mark>
+        <mark className="status-badge" data-status={group.status}>
+          {group.statusLabel}
+        </mark>
       </div>
 
       <dl className="group-summary">
@@ -229,6 +234,12 @@ function GroupCard({
         </div>
       </dl>
 
+      <Slice
+        icon="users"
+        summary={`${group.memberCount}/${maxGroupResidents}명`}
+        title="주민·픽업 순서"
+        defaultOpen
+      >
       <div className="member-list" aria-label={`${group.groupName} 멤버`}>
         {group.members.map((member) => (
           <div className="group-member-row" key={member.id}>
@@ -285,7 +296,9 @@ function GroupCard({
           </div>
         ))}
       </div>
+      </Slice>
 
+      <Slice icon="add" title="후보 추가" summary={canAddMember ? "추가 가능" : "정원/권한 확인"}>
       <form action={formAction} className="group-inline-form">
         <input name="groupId" type="hidden" value={group.id} />
         <label>
@@ -317,7 +330,18 @@ function GroupCard({
           멤버 추가
         </button>
       </form>
+      </Slice>
 
+      <Slice
+        icon="rotate"
+        title="상태 변경"
+        summary={
+          group.nextStatuses.length > 0
+            ? group.nextStatuses.map((status) => status.label).join(", ")
+            : "최종 상태"
+        }
+        tone="accent"
+      >
       <form action={formAction} className="group-inline-form">
         <input name="groupId" type="hidden" value={group.id} />
         <label>
@@ -336,7 +360,7 @@ function GroupCard({
           <textarea
             maxLength={300}
             name="reason"
-            placeholder="취소, 미탑승, 사고·민원 등 예외 상태일 때 입력합니다."
+            placeholder="예외 상태일 때 필요한 사유만 적어 주세요."
             rows={2}
           />
         </label>
@@ -350,6 +374,7 @@ function GroupCard({
           상태 변경
         </button>
       </form>
+      </Slice>
     </article>
   );
 }

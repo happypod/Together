@@ -2,6 +2,7 @@ import {
   BASE_MOBILITY_STATUSES,
   CANCELLATION_STATUSES,
   EXCEPTION_STATUSES,
+  MOBILITY_STATUS_LABELS,
   type MobilityStatus,
 } from "@/domain/definitions";
 
@@ -50,4 +51,16 @@ export function requiresStatusReason(status: MobilityStatus) {
 
 export function canTransitionMobilityStatus(from: MobilityStatus, to: MobilityStatus) {
   return MOBILITY_STATUS_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export function getNextMobilityStatusActions(status: MobilityStatus) {
+  return MOBILITY_STATUS_TRANSITIONS[status].map((nextStatus) => ({
+    value: nextStatus,
+    label: MOBILITY_STATUS_LABELS[nextStatus],
+  }));
+}
+
+export function describeNextMobilityStatusActions(status: MobilityStatus) {
+  const actions = getNextMobilityStatusActions(status);
+  return actions.length > 0 ? actions.map((action) => action.label).join(", ") : "최종 상태";
 }
