@@ -248,6 +248,20 @@ a {
   overflow-x: auto;
   padding: 0 18px 12px;
   scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.nav-strip::-webkit-scrollbar {
+  height: 8px;
+}
+
+.nav-strip::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.nav-strip::-webkit-scrollbar-thumb {
+  background-color: var(--line);
+  border-radius: 999px;
 }
 
 .nav-strip a {
@@ -1966,6 +1980,20 @@ label.check-row {
   margin-top: 12px;
   overflow-x: auto;
   scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.contract-table-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.contract-table-wrap::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.contract-table-wrap::-webkit-scrollbar-thumb {
+  background-color: var(--line);
+  border-radius: 999px;
 }
 
 .contract-table {
@@ -4810,6 +4838,7 @@ html {
   background: var(--surface);
   color: #123d35;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 .mobile-settings-trigger:hover,
@@ -4993,6 +5022,7 @@ html {
   font-weight: 900;
   cursor: pointer;
   list-style: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 .slice-summary::-webkit-details-marker {
