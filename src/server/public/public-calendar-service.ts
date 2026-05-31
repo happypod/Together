@@ -1,4 +1,5 @@
 import { type MobilityStatus, MOBILITY_PURPOSE_LABELS } from "@/domain/definitions";
+import { getKoreaYearMonth } from "@/domain/korea-date";
 import { prisma } from "@/server/db/prisma";
 
 /** 개인정보 없는 캘린더 이벤트 */
@@ -211,9 +212,7 @@ function makePreviewMonth(year: number, month: number): CalendarMonthData {
 }
 
 export function makePreviewCalendarMonths(): CalendarMonthData[] {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1;
+  const { year: y, month: m } = getKoreaYearMonth();
   return [0, 1, 2].map((offset) => {
     const mo = m + offset;
     return makePreviewMonth(mo > 12 ? y + 1 : y, mo > 12 ? mo - 12 : mo);

@@ -1,3 +1,4 @@
+import { getKoreaYearMonth } from "@/domain/korea-date";
 import {
   getPublicFeedbacks,
   getPublicNotices,
@@ -30,9 +31,7 @@ export async function getPublicHomeView() {
   let calendarMonths: CalendarMonthData[] = makePreviewCalendarMonths();
   let educationSchedules: PublicEducationScheduleItem[] = previewEducationSchedules;
 
-  const now = new Date();
-  const baseYear = now.getFullYear();
-  const baseMonth = now.getMonth() + 1;
+  const { year: baseYear, month: baseMonth } = getKoreaYearMonth();
 
   try {
     const [s, op, rec, not, fb, cal, edu] = await Promise.all([

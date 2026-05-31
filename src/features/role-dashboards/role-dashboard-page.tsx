@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FaIcon, type FontAwesomeIconName } from "@/components/ui/fa-icon";
+import { getKoreaDateKey } from "@/domain/korea-date";
 import { PublicFooter } from "@/features/public-home/public-footer";
 import { PublicHeader } from "@/features/public-home/public-header";
 import { RequestCheckForm } from "@/features/public-home/request-check-form";
@@ -829,7 +830,7 @@ function CheckItem({ checked, label }: { checked: boolean; label: string }) {
 }
 
 function getUpcomingMobility(months: CalendarMonthData[]): MobilityDashboardItem[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKoreaDateKey();
 
   return months
     .flatMap((month) =>
@@ -858,7 +859,7 @@ function getEducationByType(
   schedules: PublicEducationScheduleItem[],
   courseType: PublicEducationScheduleItem["courseType"],
 ) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getKoreaDateKey();
   return schedules
     .filter((schedule) => schedule.courseType === courseType && schedule.date >= today)
     .sort((left, right) => left.date.localeCompare(right.date));

@@ -8,6 +8,7 @@ import {
   hasPermission,
   type AuthUser,
 } from "@/domain/auth/permissions";
+import { addDateKeyDays, getKoreaDateKey } from "@/domain/korea-date";
 import { maskPhone } from "@/domain/privacy";
 import { prisma } from "@/server/db/prisma";
 
@@ -75,13 +76,13 @@ function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
 }
 
-function parseDateOnly(value: unknown, fallback = new Date()) {
+function parseDateOnly(value: unknown, fallbackKey = getKoreaDateKey()) {
   const text = cleanText(value, 10);
-  const safeText = /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : formatDateOnly(fallback);
+  const safeText = /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : fallbackKey;
   const date = new Date(`${safeText}T00:00:00.000Z`);
 
   if (Number.isNaN(date.getTime())) {
-    return parseDateOnly(undefined, fallback);
+    return parseDateOnly(undefined, fallbackKey);
   }
 
   return date;
@@ -128,8 +129,8 @@ function normalizeStatus(value: unknown) {
 
 export function buildCalendarWindow(filters: CalendarEventFilters = {}): CalendarWindow {
   const view = normalizeView(filters.view);
-  const todayDate = formatDateOnly(new Date());
-  const anchor = parseDateOnly(filters.date);
+  const todayDate = getKoreaDateKey();
+  const anchor = parseDateOnly(filters.date, todayDate);
 
   if (view === "day") {
     const end = addDays(anchor, 1);
@@ -339,8 +340,8 @@ export function summarizeCalendarEvents(events: CalendarEvent[]): CalendarSummar
   };
 }
 
-const previewToday = formatDateOnly(new Date());
-const previewNextServiceDate = formatDateOnly(addDays(new Date(), 2));
+const previewToday = getKoreaDateKey();
+const previewNextServiceDate = addDateKeyDays(previewToday, 2);
 
 export const previewCalendarEvents: CalendarEvent[] = [
   {

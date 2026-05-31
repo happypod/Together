@@ -5,19 +5,47 @@ import { useRouter } from "next/navigation";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { navigationItems } from "@/lib/navigation";
 
-type FontScale = "normal" | "large" | "xlarge";
+type FontScale =
+  | "smaller-3"
+  | "smaller-2"
+  | "smaller-1"
+  | "normal"
+  | "larger-1"
+  | "larger-2"
+  | "larger-3";
 type Contrast = "normal" | "high";
 type Theme = "clear" | "blue" | "warm";
 
 const FONT_SCALE_KEY = "together.fontScale";
 const CONTRAST_KEY = "together.contrast";
 const THEME_KEY = "together.theme";
-const FONT_ORDER: FontScale[] = ["normal", "large", "xlarge"];
+const FONT_ORDER: FontScale[] = [
+  "smaller-3",
+  "smaller-2",
+  "smaller-1",
+  "normal",
+  "larger-1",
+  "larger-2",
+  "larger-3",
+];
 const THEME_ORDER: Theme[] = ["clear", "blue", "warm"];
 const FONT_LABELS: Record<FontScale, string> = {
+  "smaller-3": "작게 3단계",
+  "smaller-2": "작게 2단계",
+  "smaller-1": "작게 1단계",
   normal: "기본",
-  large: "크게",
-  xlarge: "더 크게",
+  "larger-1": "크게 1단계",
+  "larger-2": "크게 2단계",
+  "larger-3": "크게 3단계",
+};
+const LEGACY_FONT_SCALE: Record<string, FontScale> = {
+  large: "larger-1",
+  xlarge: "larger-2",
+};
+const THEME_COLORS: Record<Theme, string> = {
+  clear: "#f7faf7",
+  blue: "#f6fbff",
+  warm: "#fffaf2",
 };
 const THEME_OPTIONS: { value: Theme; label: string; description: string }[] = [
   { value: "clear", label: "맑음", description: "기본 밝은 화면" },
@@ -37,6 +65,35 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
   }
 }
 
+function readStoredFontScale(): FontScale {
+  if (typeof window === "undefined") {
+    return "normal";
+  }
+  try {
+    const value = window.localStorage.getItem(FONT_SCALE_KEY);
+    if (!value) {
+      return "normal";
+    }
+    if ((FONT_ORDER as readonly string[]).includes(value)) {
+      return value as FontScale;
+    }
+    return LEGACY_FONT_SCALE[value] ?? "normal";
+  } catch {
+    return "normal";
+  }
+}
+
+function applyRootFontScale(next: FontScale) {
+  document.documentElement.setAttribute("data-font-scale", next);
+}
+
+function applyRootTheme(next: Theme) {
+  document.documentElement.setAttribute("data-theme", next);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", THEME_COLORS[next]);
+}
+
 type AppChromeProps = {
   currentHref?: string;
   mode?: "admin" | "public";
@@ -51,20 +108,31 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsDetailsRef = useRef<HTMLDetailsElement | null>(null);
 
-  // 부팅 스크립트가 적용한 값을 마운트 후 React 상태와 동기화한다.
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setFontScaleState(readStored(FONT_SCALE_KEY, FONT_ORDER, "normal"));
-      setContrastState(readStored(CONTRAST_KEY, ["normal", "high"] as const, "normal"));
-      setThemeState(readStored(THEME_KEY, THEME_ORDER, "clear"));
-    });
+    function syncStoredPreferences() {
+      const nextFontScale = readStoredFontScale();
+      const nextContrast = readStored(CONTRAST_KEY, ["normal", "high"] as const, "normal");
+      const nextTheme = readStored(THEME_KEY, THEME_ORDER, "clear");
+      applyRootFontScale(nextFontScale);
+      document.documentElement.setAttribute("data-contrast", nextContrast);
+      applyRootTheme(nextTheme);
+      setFontScaleState(nextFontScale);
+      setContrastState(nextContrast);
+      setThemeState(nextTheme);
+    }
 
-    return () => window.cancelAnimationFrame(frame);
+    const frame = window.requestAnimationFrame(syncStoredPreferences);
+    window.addEventListener("storage", syncStoredPreferences);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("storage", syncStoredPreferences);
+    };
   }, []);
 
   const applyFontScale = useCallback((next: FontScale) => {
     setFontScaleState(next);
-    document.documentElement.setAttribute("data-font-scale", next);
+    applyRootFontScale(next);
     try {
       window.localStorage.setItem(FONT_SCALE_KEY, next);
     } catch {
@@ -84,7 +152,7 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
 
   const applyTheme = useCallback((next: Theme) => {
     setThemeState(next);
-    document.documentElement.setAttribute("data-theme", next);
+    applyRootTheme(next);
     try {
       window.localStorage.setItem(THEME_KEY, next);
     } catch {
@@ -92,23 +160,20 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
     }
   }, []);
 
-  const stepFont = useCallback(
-    (direction: 1 | -1) => {
-      setFontScaleState((current) => {
-        const index = FONT_ORDER.indexOf(current);
-        const nextIndex = Math.min(FONT_ORDER.length - 1, Math.max(0, index + direction));
-        const next = FONT_ORDER[nextIndex];
-        document.documentElement.setAttribute("data-font-scale", next);
-        try {
-          window.localStorage.setItem(FONT_SCALE_KEY, next);
-        } catch {
-          // noop
-        }
-        return next;
-      });
-    },
-    [],
-  );
+  const stepFont = useCallback((direction: 1 | -1) => {
+    setFontScaleState((current) => {
+      const index = Math.max(0, FONT_ORDER.indexOf(current));
+      const nextIndex = Math.min(FONT_ORDER.length - 1, Math.max(0, index + direction));
+      const next = FONT_ORDER[nextIndex] ?? "normal";
+      applyRootFontScale(next);
+      try {
+        window.localStorage.setItem(FONT_SCALE_KEY, next);
+      } catch {
+        // noop
+      }
+      return next;
+    });
+  }, []);
 
   const resetPreferences = useCallback(() => {
     applyFontScale("normal");
@@ -129,7 +194,6 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
     }
   }, []);
 
-  // 전역 단축키
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -201,6 +265,10 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
     stepFont,
   ]);
 
+  const currentFontIndex = FONT_ORDER.indexOf(fontScale);
+  const canDecreaseFont = currentFontIndex > 0;
+  const canIncreaseFont = currentFontIndex >= 0 && currentFontIndex < FONT_ORDER.length - 1;
+
   function renderSettingsControls() {
     return (
       <>
@@ -209,8 +277,9 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
           {THEME_OPTIONS.find((option) => option.value === theme)?.label}
         </span>
         <button
+          aria-label={`글자 작게, 현재 ${FONT_LABELS[fontScale]}`}
           className="a11y-button"
-          disabled={fontScale === "normal"}
+          disabled={!canDecreaseFont}
           onClick={() => stepFont(-1)}
           title="글자 작게"
           type="button"
@@ -221,8 +290,9 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
           <span className="a11y-button-text">작게</span>
         </button>
         <button
+          aria-label={`글자 크게, 현재 ${FONT_LABELS[fontScale]}`}
           className="a11y-button"
-          disabled={fontScale === "xlarge"}
+          disabled={!canIncreaseFont}
           onClick={() => stepFont(1)}
           title="글자 크게"
           type="button"
@@ -232,6 +302,11 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
           </span>
           <span className="a11y-button-text">크게</span>
         </button>
+        <div className="font-step-meter" aria-hidden="true">
+          {FONT_ORDER.map((value) => (
+            <span data-active={value === fontScale ? "true" : "false"} key={value} />
+          ))}
+        </div>
         <button
           aria-pressed={contrast === "high" ? "true" : "false"}
           className="a11y-button"
@@ -279,55 +354,53 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
   }
 
   return (
-    <>
-      <details
-        className={`mobile-settings app-settings app-settings--${mode}`}
-        onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
-        ref={settingsDetailsRef}
+    <details
+      className={`mobile-settings app-settings app-settings--${mode}`}
+      onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
+      ref={settingsDetailsRef}
+    >
+      <summary
+        aria-controls="mobile-settings-popover"
+        aria-expanded={settingsOpen}
+        aria-label={settingsOpen ? "화면 설정 닫기" : "화면 설정 열기"}
+        className="mobile-settings-trigger"
+        title="화면 설정"
       >
-        <summary
-          aria-controls="mobile-settings-popover"
-          aria-expanded={settingsOpen}
-          aria-label={settingsOpen ? "화면 설정 닫기" : "화면 설정 열기"}
-          className="mobile-settings-trigger"
-          title="화면 설정"
-        >
-          <FaIcon name="sliders" />
-        </summary>
+        <FaIcon name="sliders" />
+      </summary>
+      <div
+        className="mobile-settings-layer"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            closeSettings();
+          }
+        }}
+      >
         <div
-          className="mobile-settings-layer"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              closeSettings();
-            }
-          }}
+          aria-labelledby="mobile-settings-title"
+          aria-modal="true"
+          className="mobile-settings-popover"
+          id="mobile-settings-popover"
+          role="dialog"
         >
+          <div className="mobile-settings-head">
+            <div>
+              <p className="eyebrow">화면 보기</p>
+              <h2 id="mobile-settings-title">설정</h2>
+            </div>
+            <button className="modal-close" onClick={closeSettings} type="button">
+              닫기
+            </button>
+          </div>
           <div
-            aria-labelledby="mobile-settings-title"
-            aria-modal="true"
-            className="mobile-settings-popover"
-            id="mobile-settings-popover"
-            role="dialog"
+            aria-label="화면 보기 설정"
+            className="a11y-toolbar a11y-toolbar-popover"
+            role="group"
           >
-            <div className="mobile-settings-head">
-              <div>
-                <p className="eyebrow">화면 보기</p>
-                <h2 id="mobile-settings-title">설정</h2>
-              </div>
-              <button className="modal-close" onClick={closeSettings} type="button">
-                닫기
-              </button>
-            </div>
-            <div
-              aria-label="화면 보기 설정"
-              className="a11y-toolbar a11y-toolbar-popover"
-              role="group"
-            >
-              {renderSettingsControls()}
-            </div>
+            {renderSettingsControls()}
           </div>
         </div>
-      </details>
-    </>
+      </div>
+    </details>
   );
 }

@@ -1,4 +1,5 @@
 import { type MobilityStatus, MOBILITY_PURPOSE_LABELS } from "@/domain/definitions";
+import { getKoreaTodayRange, getKoreaWeekRange } from "@/domain/korea-date";
 import { prisma } from "@/server/db/prisma";
 
 /** 사용자에게 보이는 상태 문구 — 작업지시서 §12 매핑 */
@@ -190,24 +191,11 @@ export const previewFeedbacks: PublicFeedbackItem[] = [
 // ──────────────── DB 조회 함수 ────────────────
 
 function weekRange() {
-  const now = new Date();
-  const day = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { from: monday, to: sunday };
+  return getKoreaWeekRange();
 }
 
 function todayRange() {
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
-  return { from: start, to: end };
+  return getKoreaTodayRange();
 }
 
 export async function getPublicOperationSummary(): Promise<PublicOperationSummary> {
