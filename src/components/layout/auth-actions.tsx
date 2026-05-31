@@ -20,29 +20,21 @@ export async function AuthActions({ className }: AuthActionsProps) {
 
   if (!user) {
     return (
-      <div className={classes} aria-label="로그인과 관리자 진입">
-        <Link className="auth-action auth-action-primary" href="/login">
+      <div className={classes} aria-label="로그인">
+        <Link aria-label="로그인" className="auth-action auth-action-primary" href="/login">
           <FaIcon name="login" />
-          <span>로그인</span>
-        </Link>
-        <Link className="auth-action auth-action-secondary" href="/admin">
-          <FaIcon name="admin" />
-          <span>관리자</span>
+          <span className="auth-action-text">로그인</span>
         </Link>
       </div>
     );
   }
 
   return (
-    <div className={classes} aria-label="관리자와 로그아웃">
-      <Link className="auth-action auth-action-primary" href="/admin">
-        <FaIcon name="admin" />
-        <span>관리자</span>
-      </Link>
+    <div className={classes} aria-label="로그아웃">
       <form action={logoutAction} className="auth-action-form">
-        <button className="auth-action auth-action-secondary" type="submit">
+        <button aria-label="로그아웃" className="auth-action auth-action-secondary" type="submit">
           <FaIcon name="logout" />
-          <span>로그아웃</span>
+          <span className="auth-action-text">로그아웃</span>
         </button>
       </form>
     </div>

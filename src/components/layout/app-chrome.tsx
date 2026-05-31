@@ -7,15 +7,23 @@ import { navigationItems } from "@/lib/navigation";
 
 type FontScale = "normal" | "large" | "xlarge";
 type Contrast = "normal" | "high";
+type Theme = "clear" | "blue" | "warm";
 
 const FONT_SCALE_KEY = "together.fontScale";
 const CONTRAST_KEY = "together.contrast";
+const THEME_KEY = "together.theme";
 const FONT_ORDER: FontScale[] = ["normal", "large", "xlarge"];
+const THEME_ORDER: Theme[] = ["clear", "blue", "warm"];
 const FONT_LABELS: Record<FontScale, string> = {
   normal: "기본",
   large: "크게",
   xlarge: "더 크게",
 };
+const THEME_OPTIONS: { value: Theme; label: string; description: string }[] = [
+  { value: "clear", label: "맑음", description: "기본 밝은 화면" },
+  { value: "blue", label: "파랑", description: "푸른색 강조" },
+  { value: "warm", label: "온화", description: "따뜻한 배경" },
+];
 
 function readStored<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   if (typeof window === "undefined") {
@@ -29,55 +37,26 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
   }
 }
 
-const preferenceShortcutGuide: { keys: string; desc: string }[] = [
-  { keys: "Alt + +", desc: "글자 크게" },
-  { keys: "Alt + -", desc: "글자 작게" },
-  { keys: "Alt + 0", desc: "글자 크기·대비 기본값" },
-  { keys: "Alt + H", desc: "고대비 화면 켜기·끄기" },
-  { keys: "Alt + M", desc: "본문으로 바로가기" },
-  { keys: "?", desc: "이 단축키 도움말 열기" },
-  { keys: "Esc", desc: "열린 창 닫기" },
-];
-
 type AppChromeProps = {
   currentHref?: string;
   mode?: "admin" | "public";
 };
 
-function formatNavigationShortcutKeys() {
-  const digitKeys = navigationItems
-    .map((item) => item.hotkey)
-    .filter((key) => /^[1-9]$/.test(key));
-  const letterKeys = navigationItems
-    .map((item) => item.hotkey)
-    .filter((key) => /^[a-z]$/i.test(key))
-    .map((key) => `Alt + ${key.toUpperCase()}`);
-
-  return [`Alt + ${digitKeys[0]} ~ ${digitKeys[digitKeys.length - 1]}`, ...letterKeys].join(", ");
-}
-
-export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps) {
+export function AppChrome({ mode = "admin" }: AppChromeProps) {
   const router = useRouter();
   const showNavigationShortcuts = mode === "admin";
-  const shortcutGuide = showNavigationShortcuts
-    ? [
-        { keys: formatNavigationShortcutKeys(), desc: "상단 메뉴로 바로 이동" },
-        ...preferenceShortcutGuide,
-      ]
-    : preferenceShortcutGuide;
   const [fontScale, setFontScaleState] = useState<FontScale>("normal");
   const [contrast, setContrastState] = useState<Contrast>("normal");
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [theme, setThemeState] = useState<Theme>("clear");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsDetailsRef = useRef<HTMLDetailsElement | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
-  const lastFocusRef = useRef<HTMLElement | null>(null);
 
   // 부팅 스크립트가 적용한 값을 마운트 후 React 상태와 동기화한다.
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setFontScaleState(readStored(FONT_SCALE_KEY, FONT_ORDER, "normal"));
       setContrastState(readStored(CONTRAST_KEY, ["normal", "high"] as const, "normal"));
+      setThemeState(readStored(THEME_KEY, THEME_ORDER, "clear"));
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -98,6 +77,16 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
     document.documentElement.setAttribute("data-contrast", next);
     try {
       window.localStorage.setItem(CONTRAST_KEY, next);
+    } catch {
+      // noop
+    }
+  }, []);
+
+  const applyTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      window.localStorage.setItem(THEME_KEY, next);
     } catch {
       // noop
     }
@@ -124,7 +113,8 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
   const resetPreferences = useCallback(() => {
     applyFontScale("normal");
     applyContrast("normal");
-  }, [applyFontScale, applyContrast]);
+    applyTheme("clear");
+  }, [applyContrast, applyFontScale, applyTheme]);
 
   const closeSettings = useCallback(() => {
     settingsDetailsRef.current?.removeAttribute("open");
@@ -142,16 +132,7 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
   // 전역 단축키
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      const typing =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable);
-
       if (event.key === "Escape") {
-        setHelpOpen(false);
         closeSettings();
         return;
       }
@@ -206,12 +187,6 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
             return;
         }
       }
-
-      if (!typing && event.key === "?") {
-        event.preventDefault();
-        closeSettings();
-        setHelpOpen((open) => !open);
-      }
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -226,31 +201,18 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
     stepFont,
   ]);
 
-  // 모달 포커스 관리
-  useEffect(() => {
-    if (helpOpen) {
-      lastFocusRef.current = document.activeElement as HTMLElement | null;
-      closeButtonRef.current?.focus();
-    } else {
-      lastFocusRef.current?.focus?.();
-    }
-  }, [helpOpen]);
-
-  const activeItem = showNavigationShortcuts
-    ? navigationItems.find((item) => item.href === currentHref)
-    : undefined;
-
   function renderSettingsControls() {
     return (
       <>
         <span className="a11y-status" aria-hidden="true">
-          글자 {FONT_LABELS[fontScale]}
+          글자 {FONT_LABELS[fontScale]} · 테마{" "}
+          {THEME_OPTIONS.find((option) => option.value === theme)?.label}
         </span>
         <button
           className="a11y-button"
           disabled={fontScale === "normal"}
           onClick={() => stepFont(-1)}
-          title="글자 작게 (Alt + -)"
+          title="글자 작게"
           type="button"
         >
           <span aria-hidden="true">
@@ -262,7 +224,7 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
           className="a11y-button"
           disabled={fontScale === "xlarge"}
           onClick={() => stepFont(1)}
-          title="글자 크게 (Alt + +)"
+          title="글자 크게"
           type="button"
         >
           <span aria-hidden="true" className="a11y-big">
@@ -274,7 +236,7 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
           aria-pressed={contrast === "high" ? "true" : "false"}
           className="a11y-button"
           onClick={() => applyContrast(contrast === "high" ? "normal" : "high")}
-          title="고대비 화면 (Alt + H)"
+          title="고대비 화면"
           type="button"
         >
           <span aria-hidden="true">
@@ -283,19 +245,35 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
           <span className="a11y-button-text">고대비</span>
         </button>
         <button
-          className="a11y-button a11y-help-button"
-          onClick={() => {
-            closeSettings();
-            setHelpOpen(true);
-          }}
-          title="단축키 도움말 (?)"
+          className="a11y-button"
+          onClick={resetPreferences}
+          title="화면 보기 기본값"
           type="button"
         >
           <span aria-hidden="true">
-            <FaIcon name="keyboard" />
+            <FaIcon name="rotate" />
           </span>
-          <span className="a11y-button-text">단축키</span>
+          <span className="a11y-button-text">기본값</span>
         </button>
+        <div className="theme-picker" role="group" aria-label="화면 테마">
+          <p>테마</p>
+          <div className="theme-options">
+            {THEME_OPTIONS.map((option) => (
+              <button
+                aria-pressed={theme === option.value ? "true" : "false"}
+                className="theme-option"
+                data-theme-option={option.value}
+                key={option.value}
+                onClick={() => applyTheme(option.value)}
+                title={option.description}
+                type="button"
+              >
+                <span aria-hidden="true" className="theme-swatch" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </>
     );
   }
@@ -340,75 +318,16 @@ export function AppChrome({ currentHref = "/", mode = "admin" }: AppChromeProps)
                 닫기
               </button>
             </div>
-            <div className="a11y-toolbar a11y-toolbar-popover" role="group" aria-label="화면 보기 설정">
+            <div
+              aria-label="화면 보기 설정"
+              className="a11y-toolbar a11y-toolbar-popover"
+              role="group"
+            >
               {renderSettingsControls()}
             </div>
           </div>
         </div>
       </details>
-
-      {helpOpen ? (
-        <div
-          className="modal-backdrop"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setHelpOpen(false);
-            }
-          }}
-        >
-          <div
-            aria-labelledby="shortcut-help-title"
-            aria-modal="true"
-            className="modal-card"
-            role="dialog"
-          >
-            <div className="modal-head">
-              <div>
-                <p className="eyebrow">키보드 단축키</p>
-                <h2 id="shortcut-help-title">빠른 사용 안내</h2>
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setHelpOpen(false)}
-                ref={closeButtonRef}
-                type="button"
-              >
-                닫기
-              </button>
-            </div>
-            <p className="modal-lead">
-              {activeItem
-                ? `현재 화면: ${activeItem.label}`
-                : "글자 크기와 화면 대비를 조정할 수 있습니다."}
-            </p>
-            <dl className="shortcut-list">
-              {shortcutGuide.map((row) => (
-                <div className="shortcut-row" key={row.keys}>
-                  <dt>
-                    <kbd>{row.keys}</kbd>
-                  </dt>
-                  <dd>{row.desc}</dd>
-                </div>
-              ))}
-            </dl>
-            {showNavigationShortcuts ? (
-              <div className="shortcut-nav">
-                <p className="form-help">메뉴 바로가기</p>
-                <ul>
-                  {navigationItems.map((item) => (
-                    <li key={item.href}>
-                      <kbd>Alt + {item.hotkey}</kbd>
-                      <span>
-                        <FaIcon name={item.icon} /> {item.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

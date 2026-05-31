@@ -23,8 +23,11 @@ export function AppShell({ children, currentHref = "/" }: AppShellProps) {
               동행
             </span>
             <div>
-              <p>소원권역 동행이동 OS</p>
-              <strong>운영관리</strong>
+              <p className="brand-kicker">소원권역 동행이동 OS</p>
+              <strong>
+                <span className="brand-title-full">운영관리</span>
+                <span className="brand-title-mobile">관리</span>
+              </strong>
             </div>
           </div>
           <div className="topbar-side">
