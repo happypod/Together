@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Slice } from "@/components/ui/slice";
+import { Tabs, type TabItem } from "@/components/ui/tabs";
 import {
   groupOperationAction,
   type GroupOperationFormState,
@@ -42,20 +43,11 @@ export function MobilityGroupWorkspace({
 }: MobilityGroupWorkspaceProps) {
   const [state, formAction, pending] = useActionState(groupOperationAction, initialState);
 
-  return (
-    <div className="group-workspace">
-      {notice ? (
-        <p className="request-notice" role="status">
-          {notice}
-        </p>
-      ) : null}
-      {state.message ? (
-        <p className={state.ok ? "form-message success" : "form-message"} role="status">
-          {state.message}
-        </p>
-      ) : null}
-      <p className="privacy-guidance">{PRIVACY_INPUT_GUIDANCE}</p>
-
+  const createTab: TabItem = {
+    id: "create",
+    icon: "add",
+    label: "그룹 생성",
+    content: (
       <section className="group-panel" aria-labelledby="group-create-title">
         <div className="section-header">
           <p className="eyebrow">그룹 생성</p>
@@ -63,9 +55,7 @@ export function MobilityGroupWorkspace({
         </div>
         <form action={formAction} className="group-form">
           <input name="intent" type="hidden" value="createGroup" />
-          <p className="group-limit">
-            최대 {settings.maxGroupResidents}명 선택
-          </p>
+          <p className="group-limit">최대 {settings.maxGroupResidents}명 선택</p>
           <div className="candidate-list">
             {candidates.length > 0 ? (
               candidates.map((candidate) => (
@@ -114,7 +104,15 @@ export function MobilityGroupWorkspace({
           </button>
         </form>
       </section>
+    ),
+  };
 
+  const listTab: TabItem = {
+    id: "list",
+    icon: "users",
+    label: "그룹 목록",
+    badge: groups.length,
+    content: (
       <section className="group-panel" aria-labelledby="group-list-title">
         <div className="section-header">
           <p className="eyebrow">그룹 목록</p>
@@ -167,6 +165,23 @@ export function MobilityGroupWorkspace({
           )}
         </div>
       </section>
+    ),
+  };
+
+  return (
+    <div className="group-workspace">
+      {notice ? (
+        <p className="request-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
+      {state.message ? (
+        <p className={state.ok ? "form-message success" : "form-message"} role="status">
+          {state.message}
+        </p>
+      ) : null}
+      <p className="privacy-guidance">{PRIVACY_INPUT_GUIDANCE}</p>
+      <Tabs ariaLabel="공동예약 메뉴" defaultTabId="list" tabs={[createTab, listTab]} />
     </div>
   );
 }
@@ -194,9 +209,14 @@ function GroupCard({
       candidate.desiredTimeWindow === group.timeWindow,
   );
   const canAddMember = canWrite && group.memberCount < maxGroupResidents;
+  const nextStatusLabel =
+    group.nextStatuses.length > 0
+      ? group.nextStatuses.map((s) => s.label).join(", ")
+      : "최종 상태";
 
   return (
     <article className="group-card">
+      {/* 카드 헤더: 그룹명(좌) + 상태 뱃지(우) — flex으로 항상 인라인 */}
       <div className="group-card-header">
         <div>
           <strong>{group.groupName}</strong>
@@ -209,12 +229,11 @@ function GroupCard({
         </mark>
       </div>
 
+      {/* 핵심 요약: 항상 2열 */}
       <dl className="group-summary">
         <div>
           <dt>주민</dt>
-          <dd>
-            {group.memberCount}/{maxGroupResidents}명
-          </dd>
+          <dd>{group.memberCount}/{maxGroupResidents}명</dd>
         </div>
         <div>
           <dt>귀가 예정</dt>
@@ -222,159 +241,159 @@ function GroupCard({
         </div>
         <div>
           <dt>다음 행동</dt>
-          <dd>
-            {group.nextStatuses.length > 0
-              ? group.nextStatuses.map((status) => status.label).join(", ")
-              : "최종 상태"}
-          </dd>
+          <dd>{nextStatusLabel}</dd>
         </div>
         <div>
-          <dt>사유</dt>
+          <dt>예외 사유</dt>
           <dd>{group.exceptionReason || "없음"}</dd>
         </div>
       </dl>
 
-      <Slice
-        icon="users"
-        summary={`${group.memberCount}/${maxGroupResidents}명`}
-        title="주민·픽업 순서"
-        defaultOpen
-      >
-      <div className="member-list" aria-label={`${group.groupName} 멤버`}>
-        {group.members.map((member) => (
-          <div className="group-member-row" key={member.id}>
-            <div className="member-title">
-              <strong>
-                {member.pickupOrder}. {member.residentName}
-              </strong>
-              <span>{member.phoneMasked}</span>
-            </div>
-            <form action={formAction} className="pickup-form">
-              <input name="groupId" type="hidden" value={group.id} />
-              <input name="memberId" type="hidden" value={member.id} />
-              <label>
-                순서
-                <input
-                  defaultValue={member.pickupOrder}
-                  max={maxGroupResidents}
-                  min={1}
-                  name="pickupOrder"
-                  type="number"
-                />
-              </label>
-              <label>
-                픽업 예정
-                <input defaultValue={member.pickupEta} name="pickupEta" type="datetime-local" />
-              </label>
-              <label>
-                픽업 장소
-                <input defaultValue={member.pickupPlace} maxLength={120} name="pickupPlace" />
-              </label>
-              <button
-                className="secondary-action"
-                disabled={!canWrite || pending}
-                name="intent"
-                type="submit"
-                value="updatePickup"
-              >
-                픽업 저장
-              </button>
-            </form>
-            <form action={formAction}>
-              <input name="groupId" type="hidden" value={group.id} />
-              <input name="memberId" type="hidden" value={member.id} />
-              <button
-                className="text-danger-action"
-                disabled={!canWrite || pending}
-                name="intent"
-                type="submit"
-                value="removeMember"
-              >
-                멤버 제거
-              </button>
-            </form>
+      {/* 슬라이스 모음 */}
+      <div className="slice-stack">
+        {/* 주민·픽업 순서 */}
+        <Slice
+          defaultOpen
+          icon="users"
+          summary={`${group.memberCount}/${maxGroupResidents}명`}
+          title="주민·픽업 순서"
+        >
+          <div className="member-list" aria-label={`${group.groupName} 멤버`}>
+            {group.members.map((member) => (
+              <div className="group-member-row" key={member.id}>
+                <div className="member-title">
+                  <strong>{member.pickupOrder}. {member.residentName}</strong>
+                  <span>{member.phoneMasked}</span>
+                </div>
+                <form action={formAction} className="pickup-form">
+                  <input name="groupId" type="hidden" value={group.id} />
+                  <input name="memberId" type="hidden" value={member.id} />
+                  <label>
+                    순서
+                    <input
+                      defaultValue={member.pickupOrder}
+                      max={maxGroupResidents}
+                      min={1}
+                      name="pickupOrder"
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    픽업 예정
+                    <input defaultValue={member.pickupEta} name="pickupEta" type="datetime-local" />
+                  </label>
+                  <label>
+                    픽업 장소
+                    <input defaultValue={member.pickupPlace} maxLength={120} name="pickupPlace" />
+                  </label>
+                  <button
+                    className="secondary-action"
+                    disabled={!canWrite || pending}
+                    name="intent"
+                    type="submit"
+                    value="updatePickup"
+                  >
+                    픽업 저장
+                  </button>
+                </form>
+                <form action={formAction}>
+                  <input name="groupId" type="hidden" value={group.id} />
+                  <input name="memberId" type="hidden" value={member.id} />
+                  <button
+                    className="text-danger-action"
+                    disabled={!canWrite || pending}
+                    name="intent"
+                    type="submit"
+                    value="removeMember"
+                  >
+                    멤버 제거
+                  </button>
+                </form>
+              </div>
+            ))}
           </div>
-        ))}
+        </Slice>
+
+        {/* 후보 추가 */}
+        <Slice
+          icon="add"
+          summary={canAddMember ? "추가 가능" : matchingCandidates.length === 0 ? "후보 없음" : "정원 초과"}
+          title="후보 추가"
+        >
+          <form action={formAction} className="group-inline-form">
+            <input name="groupId" type="hidden" value={group.id} />
+            <label>
+              후보 선택
+              <select disabled={!canAddMember} name="requestId">
+                <option value="">같은 날짜·시간대 후보 선택</option>
+                {matchingCandidates.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.residentName} · {candidate.origin}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              픽업 장소
+              <input maxLength={120} name="pickupPlace" placeholder="미입력 시 신청 출발지 사용" />
+            </label>
+            <label>
+              픽업 예정
+              <input name="pickupEta" type="datetime-local" />
+            </label>
+            <button
+              className="secondary-action"
+              disabled={!canAddMember || matchingCandidates.length === 0 || pending}
+              name="intent"
+              type="submit"
+              value="addMember"
+            >
+              멤버 추가
+            </button>
+          </form>
+        </Slice>
+
+        {/* 상태 변경 */}
+        <Slice
+          icon="rotate"
+          summary={nextStatusLabel}
+          title="상태 변경"
+          tone="accent"
+        >
+          <form action={formAction} className="group-inline-form">
+            <input name="groupId" type="hidden" value={group.id} />
+            <label>
+              다음 상태
+              <select disabled={!canWrite || group.nextStatuses.length === 0} name="nextStatus">
+                <option value="">다음 상태 선택</option>
+                {group.nextStatuses.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              취소·예외 사유
+              <textarea
+                maxLength={300}
+                name="reason"
+                placeholder="예외 상태일 때 필요한 사유만 적어 주세요."
+                rows={2}
+              />
+            </label>
+            <button
+              className="secondary-action"
+              disabled={!canWrite || group.nextStatuses.length === 0 || pending}
+              name="intent"
+              type="submit"
+              value="transitionStatus"
+            >
+              상태 변경
+            </button>
+          </form>
+        </Slice>
       </div>
-      </Slice>
-
-      <Slice icon="add" title="후보 추가" summary={canAddMember ? "추가 가능" : "정원/권한 확인"}>
-      <form action={formAction} className="group-inline-form">
-        <input name="groupId" type="hidden" value={group.id} />
-        <label>
-          후보 추가
-          <select disabled={!canAddMember} name="requestId">
-            <option value="">같은 날짜·시간대 후보 선택</option>
-            {matchingCandidates.map((candidate) => (
-              <option key={candidate.id} value={candidate.id}>
-                {candidate.residentName} · {candidate.origin}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          픽업 장소
-          <input maxLength={120} name="pickupPlace" placeholder="미입력 시 신청 출발지 사용" />
-        </label>
-        <label>
-          픽업 예정
-          <input name="pickupEta" type="datetime-local" />
-        </label>
-        <button
-          className="secondary-action"
-          disabled={!canAddMember || matchingCandidates.length === 0 || pending}
-          name="intent"
-          type="submit"
-          value="addMember"
-        >
-          멤버 추가
-        </button>
-      </form>
-      </Slice>
-
-      <Slice
-        icon="rotate"
-        title="상태 변경"
-        summary={
-          group.nextStatuses.length > 0
-            ? group.nextStatuses.map((status) => status.label).join(", ")
-            : "최종 상태"
-        }
-        tone="accent"
-      >
-      <form action={formAction} className="group-inline-form">
-        <input name="groupId" type="hidden" value={group.id} />
-        <label>
-          상태 변경
-          <select disabled={!canWrite || group.nextStatuses.length === 0} name="nextStatus">
-            <option value="">다음 상태 선택</option>
-            {group.nextStatuses.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          취소·예외 사유
-          <textarea
-            maxLength={300}
-            name="reason"
-            placeholder="예외 상태일 때 필요한 사유만 적어 주세요."
-            rows={2}
-          />
-        </label>
-        <button
-          className="secondary-action"
-          disabled={!canWrite || group.nextStatuses.length === 0 || pending}
-          name="intent"
-          type="submit"
-          value="transitionStatus"
-        >
-          상태 변경
-        </button>
-      </form>
-      </Slice>
     </article>
   );
 }

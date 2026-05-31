@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AuthActions } from "@/components/layout/auth-actions";
 import { AppChrome } from "@/components/layout/app-chrome";
 import { FaIcon } from "@/components/ui/fa-icon";
 import { navigationItems } from "@/lib/navigation";
@@ -22,12 +23,13 @@ export function AppShell({ children, currentHref = "/" }: AppShellProps) {
               동행
             </span>
             <div>
-              <p>백천마을 동행이동 OS</p>
+              <p>소원권역 동행이동 OS</p>
               <strong>운영관리</strong>
             </div>
           </div>
           <div className="topbar-side">
             <AppChrome currentHref={currentHref} />
+            <AuthActions />
             <div className="status-pill" aria-label="시스템 상태">
               <span aria-hidden="true" />
               운영 준비

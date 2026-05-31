@@ -6,6 +6,7 @@ import {
   issueRequestIntakeLinkAction,
   type ResidentRequestFormState,
 } from "@/app/admin/requests/actions";
+import { Tabs, type TabItem } from "@/components/ui/tabs";
 import {
   MOBILITY_PURPOSE_LABELS,
   MOBILITY_PURPOSES,
@@ -53,19 +54,13 @@ export function ResidentRequestWorkspace({
     initialState,
   );
 
-  return (
-    <div className="request-workspace">
-      {notice ? (
-        <p className="request-notice" role="status">
-          {notice}
-        </p>
-      ) : null}
-
+  const registerTab: TabItem = {
+    id: "register",
+    icon: "clipboardList",
+    label: "신청 등록",
+    content: (
       <section className="request-form-panel" aria-labelledby="request-create-title">
-        <div className="section-header">
-          <p className="eyebrow">신청 등록</p>
-          <h2 id="request-create-title">주민과 이동 신청</h2>
-        </div>
+        {/* 모바일 신청 링크 발급 */}
         <form action={linkFormAction} className="request-mobile-link-form">
           <div>
             <strong>모바일 신청 링크</strong>
@@ -81,11 +76,18 @@ export function ResidentRequestWorkspace({
             disabled={!canIssueMobileLink || linkPending}
             type="submit"
           >
-            {linkPending ? "링크 만드는 중" : canIssueMobileLink ? "모바일 신청 링크 만들기" : "권한 필요"}
+            {linkPending
+              ? "링크 만드는 중"
+              : canIssueMobileLink
+                ? "모바일 신청 링크 만들기"
+                : "권한 필요"}
           </button>
         </form>
+
+        {/* 직접 신청 등록 폼 */}
         <form action={formAction} className="request-form">
           <p className="privacy-guidance">{PRIVACY_INPUT_GUIDANCE}</p>
+
           <fieldset>
             <legend>주민 정보</legend>
             <label>
@@ -193,6 +195,7 @@ export function ResidentRequestWorkspace({
             </label>
           </fieldset>
 
+          {/* 필수 확인: 고령자를 위한 명확한 큰 체크박스 */}
           <fieldset className="privacy-checks">
             <legend>필수 확인</legend>
             <label className="check-row">
@@ -220,12 +223,21 @@ export function ResidentRequestWorkspace({
           </button>
         </form>
       </section>
+    ),
+  };
 
+  const listTab: TabItem = {
+    id: "list",
+    icon: "search",
+    label: "신청 목록",
+    badge: requests.length,
+    content: (
       <section className="request-list-panel" aria-labelledby="request-list-title">
         <div className="section-header">
           <p className="eyebrow">신청 목록</p>
           <h2 id="request-list-title">검색과 필터</h2>
         </div>
+
         <form action="/admin/requests" className="request-filter-form">
           <label>
             검색
@@ -311,7 +323,7 @@ export function ResidentRequestWorkspace({
                   </div>
                   <div>
                     <dt>동의</dt>
-                    <dd>{request.privacyReady ? "확인 완료" : "확인 필요"}</dd>
+                    <dd>{request.privacyReady ? "✓ 확인 완료" : "⚠ 확인 필요"}</dd>
                   </div>
                 </dl>
               </article>
@@ -321,6 +333,21 @@ export function ResidentRequestWorkspace({
           )}
         </div>
       </section>
+    ),
+  };
+
+  return (
+    <div className="request-workspace">
+      {notice ? (
+        <p className="request-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
+      <Tabs
+        ariaLabel="주민 신청 메뉴"
+        defaultTabId="register"
+        tabs={[registerTab, listTab]}
+      />
     </div>
   );
 }

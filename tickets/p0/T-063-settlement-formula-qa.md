@@ -123,7 +123,7 @@
   - `$env:DATABASE_URL='postgresql://user:password@localhost:5432/together'; corepack.cmd pnpm db:validate`
   - `node --check prisma\seed.mjs`
   - `curl.exe -4 -I http://localhost:3000/admin/settlements`
-  - `curl.exe -4 -s http://localhost:3000/admin/settlements | Select-String -Pattern "백천마을 동행이동 OS|산식 검증|상생기금|정산 총액|주민 총 분담|택시요금 차감|환급"`
+  - `curl.exe -4 -s http://localhost:3000/admin/settlements | Select-String -Pattern "소원권역 동행이동 OS|산식 검증|상생기금|정산 총액|주민 총 분담|택시요금 차감|환급"`
 - 결과:
   - `settlement-formulas-ok`
   - `state-transitions-ok`

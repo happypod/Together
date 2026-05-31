@@ -119,4 +119,4 @@ Required before P2 implementation:
 - [x] 개인정보와 문서 보관 정책 재확인
 - [x] PDF, 사용자관리, 취업연계, MOU 중 필요한 기능만 선택
 
-Current status: passed after P2-004 implementation. DB-backed commit verification remains in the follow-up DB connection ticket.
+Current status: passed after P2-004 implementation. Neon schema migration and initial SUPER_ADMIN bootstrap are complete; authenticated DB-backed E2E remains as the follow-up verification ticket.

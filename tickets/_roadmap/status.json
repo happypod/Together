@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "updatedAt": "2026-05-31",
   "project": {
-    "officialName": "백천마을 동행이동 OS",
-    "publicName": "백천마을 동행택시",
+    "officialName": "소원권역 동행이동 OS",
+    "publicName": "소원권역 동행택시",
     "type": "공동예약형 생활이동 및 동행링커 운영관리 시스템",
     "mvpScope": "관리자 웹 중심 MVP, 모바일 링크형 입력폼 보조"
   },
   "workspace": {
     "root": "F:\\moalab\\Together",
     "repoStatus": "git_repository_connected_to_happypod_Together",
-    "implementationStatus": "p2_004_mou_management_completed_without_db_commit"
+    "implementationStatus": "p2_004_completed_neon_migrated_initial_admin_ready"
   },
   "integrationValidation": {
     "updatedAt": "2026-05-31",
     "scope": "Full MVP validation through P2-004 MOU management extension, including P0 acceptance, P1 flows, T-064 mobile QA, P2-001 PDF export, P2-002 user lifecycle, P2-003 aggregate job consultation management, and P2-004 MOU monthly report reflection",
-    "result": "passed_without_db_commit",
+    "result": "passed_with_neon_schema_migrated",
     "passed": [
       "P0 final acceptance script",
       "excluded feature script",
@@ -131,25 +131,25 @@
       "P2-004 /admin/mou-records renders month/status filters, summary cards, disabled unauthenticated write form, document link/attachment indicators, and organization cards",
       "P2-004 /admin/reports includes MOU count in headline, comparison, print, PDF, CSV, and administrative report projections",
       "P2-004 verify-mou-records, verify-rbac-access, forbidden operational language, P0 acceptance, typecheck, lint, schema validate, production build, and HTTP 200 checks passed",
-      "P2-004 Browser plugin failed with windows sandbox setup refresh; Chrome CDP fallback screenshots captured under .verification/p2-004-mou-qa"
+      "P2-004 Browser plugin failed with windows sandbox setup refresh; Chrome CDP fallback screenshots captured under .verification/p2-004-mou-qa",
+      "Brand name changed to 소원권역 동행이동 OS across app shell, login, metadata, reports, roadmap docs, and validation scripts",
+      "Neon PostgreSQL connection verified from local environment",
+      "Prisma migrate deploy applied 5 migrations to Neon: initial domain, survey emotional recovery, PDF export audit action, job consultation, and MOU record",
+      "Neon DB verification found 21 public tables and 5 finished Prisma migrations",
+      "Initial active SUPER_ADMIN account was created from .env.local without loading sample seed data"
     ],
     "blocked": [
-      ".env file is missing",
-      "DATABASE_URL and NEXTAUTH_SECRET are not set in the current shell",
-      "localhost:5432 PostgreSQL connection is not available",
-      "DATABASE_URL is required before DB-backed CSV/PDF export, user management mutations, and AuditLog commit can be verified",
-      "DATABASE_URL is required before valid mobile token form E2E submission can be verified",
-      "DATABASE_URL is required before applying the JobConsultation migration and verifying authenticated DB-backed JobConsultation save/AuditLog commit",
-      "DATABASE_URL is required before applying the MouRecord migration and verifying authenticated DB-backed MOU save, FileAttachment linkage, and AuditLog commit"
+      "Authenticated browser E2E for DB-backed CSV/PDF export, user management mutation, JobConsultation save, MOU save, FileAttachment linkage, AuditLog commit, and valid mobile-token submission still needs to be run after logging in",
+      "Full sample seed data was intentionally not loaded; only the initial SUPER_ADMIN account was bootstrapped"
     ],
-    "nextRequired": "No remaining planned implementation ticket in the current queue. Define the DB connection/integration validation ticket, then provide a migrated PostgreSQL integration database and DATABASE_URL for DB-backed CSV/PDF export, user management, JobConsultation, MOU, AuditLog, FileAttachment, valid mobile-token submission E2E checks, and authenticated real-data report comparison."
+    "nextRequired": "Run authenticated DB-backed E2E after logging in with the initial SUPER_ADMIN account, then decide whether to load or create real operating seed data for residents, settings, groups, trips, settlements, reports, JobConsultation, and MOU."
   },
   "sourceSpec": {
-    "title": "백천마을 동행이동 OS MVP 설계문서",
+    "title": "소원권역 동행이동 OS MVP 설계문서",
     "date": "2026-05-30",
     "attachment": "C:\\Users\\happy\\.codex\\attachments\\839431a2-5b9e-45bd-8850-8aa6627ecc66\\pasted-text.txt"
   },
-  "currentStage": "p2_p2_004_done_queue_complete",
+  "currentStage": "p2_done_neon_migrated_admin_ready",
   "activeTicket": null,
   "nextTickets": [],
   "counts": {

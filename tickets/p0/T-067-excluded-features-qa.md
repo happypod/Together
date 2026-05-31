@@ -128,7 +128,7 @@ P0는 내부 운영관리 핵심 흐름에 집중해야 한다. 제외 기능이
   - typecheck, lint, production build 통과
   - Prisma schema validate와 seed syntax check 통과
   - `/admin/trips`, `/m/t067-invalid-token` HTTP 200
-  - `.env.example`의 앱명은 `백천마을 동행이동 OS`로 정정
+  - `.env.example`의 앱명은 `소원권역 동행이동 OS`로 정정
 - 수동 확인:
   - `.verification/t067-trips-390x900.png`
   - `.verification/t067-trips-1280x900.png`

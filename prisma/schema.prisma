@@ -132,6 +132,20 @@ enum CommunityFundType {
   SUPPORT_RECORD
 }
 
+enum NoticeType {
+  GENERAL
+  OPERATION
+  SAFETY
+  PRIVACY
+}
+
+enum PublicFeedbackSource {
+  RESIDENT
+  GUARDIAN
+  LINKER
+  OPERATOR
+}
+
 enum JobConsultationTargetType {
   LINKER
   RESIDENT
@@ -180,6 +194,8 @@ model User {
   createdJobConsultations JobConsultation[] @relation("JobConsultationCreatedBy")
   createdMouRecords MouRecord[]     @relation("MouRecordCreatedBy")
   auditLogs       AuditLog[]
+  createdNotices  Notice[]          @relation("NoticeCreatedBy")
+  approvedFeedbacks PublicFeedback[] @relation("FeedbackApprovedBy")
 
   @@index([role])
   @@index([isActive])
@@ -603,3 +619,44 @@ model ContactLog {
   @@index([contactedAt])
   @@index([createdByUserId])
 }
+
+model Notice {
+  id              String     @id @default(uuid()) @db.Uuid
+  title           String
+  content         String
+  noticeType      NoticeType @default(GENERAL)
+  isPinned        Boolean    @default(false)
+  isVisible       Boolean    @default(true)
+  startDate       DateTime?  @db.Date
+  endDate         DateTime?  @db.Date
+  createdByUserId String     @db.Uuid
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  createdBy       User       @relation("NoticeCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([noticeType])
+  @@index([isPinned, isVisible])
+  @@index([createdAt])
+}
+
+model PublicFeedback {
+  id               String               @id @default(uuid()) @db.Uuid
+  sourceType       PublicFeedbackSource
+  villageLabel     String?
+  roleLabel        String?
+  content          String
+  isApproved       Boolean              @default(false)
+  isVisible        Boolean              @default(false)
+  approvedByUserId String?              @db.Uuid
+  approvedAt       DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  approvedBy       User?                @relation("FeedbackApprovedBy", fields: [approvedByUserId], references: [id])
+
+  @@index([isApproved, isVisible])
+  @@index([sourceType])
+  @@index([createdAt])
+}
+

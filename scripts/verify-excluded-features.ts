@@ -193,7 +193,7 @@ const envViolations = envText
   .filter((line) => line.trim() && !line.trim().startsWith("#"))
   .filter((line) => bannedEnvPatterns.some((pattern) => pattern.test(line)));
 assert.deepEqual(envViolations, [], "Excluded feature environment variable exists");
-assert.match(envText, /NEXT_PUBLIC_APP_NAME="백천마을 동행이동 OS"/);
+assert.match(envText, /NEXT_PUBLIC_APP_NAME="소원권역 동행이동 OS"/);
 assert.doesNotMatch(envText, /백천만/);
 
 const routeFiles = listFiles("src/app").filter((file) => file.endsWith("route.ts"));

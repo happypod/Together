@@ -186,7 +186,7 @@ function buildReportLines(report: MonthlyOperationReport) {
   const lines: PdfTextLine[] = [];
   const add = (line: PdfTextLine) => pushWrappedLine(lines, line);
 
-  add({ text: "백천마을 동행이동 월간보고서", size: 18, gapAfter: 22 });
+  add({ text: "소원권역 동행이동 월간보고서", size: 18, gapAfter: 22 });
   add({ text: `${report.month} · ${reportBasisLabel(report)}`, size: 12.5, gapAfter: 12 });
   add({ text: `생성 기준: ${report.sourceLabel} · 생성 시각: ${report.generatedAt}`, gapAfter: 18 });
 
@@ -298,7 +298,7 @@ function buildPageStream(lines: PdfTextLine[], pageNumber: number, totalPages: n
     "0.31 0.40 0.36 rg 54 36 487 1 re f",
     textCommand(
       {
-        text: `백천마을 동행이동 OS · 월간보고서 · ${pageNumber}/${totalPages}`,
+        text: `소원권역 동행이동 OS · 월간보고서 · ${pageNumber}/${totalPages}`,
         size: 8.5,
       },
       22,

@@ -1,11 +1,12 @@
 # Implementation Queue
 
-이 큐는 백천마을 동행이동 OS MVP 제작 순서의 단일 실행 목록이다.
+이 큐는 소원권역 동행이동 OS MVP 제작 순서의 단일 실행 목록이다.
 
 ## Current Focus
 
 1. 현재 계획된 P0/P1/P2 구현 티켓은 모두 완료됨
-2. 후속 필요: DB 연결 및 통합 DB 검증 티켓 정의
+2. Neon DB migration 적용 및 초기 SUPER_ADMIN 계정 생성 완료
+3. 후속 필요: 로그인 후 DB-backed E2E 검증 티켓 정의
 
 ## P0 Queue
 

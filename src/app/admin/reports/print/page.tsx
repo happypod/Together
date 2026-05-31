@@ -230,7 +230,7 @@ export default async function PrintableMonthlyReportPage({ searchParams }: Print
           <header className="print-report-header">
             <div>
               <p className="eyebrow">인쇄용 월간보고서</p>
-              <h1 id="print-report-title">백천마을 동행이동 월간보고서</h1>
+              <h1 id="print-report-title">소원권역 동행이동 월간보고서</h1>
               <p>
                 {monthlyReport.month} · {reportBasisLabel(monthlyReport)}
               </p>
@@ -318,7 +318,7 @@ export default async function PrintableMonthlyReportPage({ searchParams }: Print
           </section>
 
           <footer className="print-footer">
-            <span>백천마을 동행이동 OS</span>
+            <span>소원권역 동행이동 OS</span>
             <span>{monthlyReport.month} 인쇄용 월간보고서</span>
           </footer>
         </article>

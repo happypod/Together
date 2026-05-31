@@ -246,7 +246,7 @@ for (const envName of [
 ]) {
   assert.match(envExample, new RegExp(`^${envName}=`, "m"), `${envName} is missing from .env.example`);
 }
-assert.match(envExample, /NEXT_PUBLIC_APP_NAME="백천마을 동행이동 OS"/);
+assert.match(envExample, /NEXT_PUBLIC_APP_NAME="소원권역 동행이동 OS"/);
 
 const globalsCss = readText("src/app/globals.css");
 for (const pattern of [

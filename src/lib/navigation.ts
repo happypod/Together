@@ -1,7 +1,7 @@
 import type { FontAwesomeIconName } from "@/lib/fa-icons";
 
 export const navigationItems = [
-  { label: "대시보드", href: "/", icon: "dashboard", hotkey: "1" },
+  { label: "대시보드", href: "/admin", icon: "dashboard", hotkey: "1" },
   { label: "주민", href: "/admin/requests", icon: "resident", hotkey: "2" },
   { label: "공동예약", href: "/admin/groups", icon: "users", hotkey: "3" },
   { label: "캘린더", href: "/admin/calendar", icon: "calendar", hotkey: "4" },

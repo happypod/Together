@@ -3,9 +3,44 @@ import type { ReactNode } from "react";
 import { navigationItems } from "@/lib/navigation";
 import "./globals.css";
 
+const appName = "소원권역 동행이동 OS";
+const appDescription = "공동예약형 생활이동 및 동행링커 운영관리 시스템";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+const ogImage = {
+  url: "/og-image.png",
+  width: 1200,
+  height: 630,
+  alt: "소원권역 동행이동 OS 대표 이미지",
+};
+
 export const metadata: Metadata = {
-  title: "백천마을 동행이동 OS",
-  description: "공동예약형 생활이동 및 동행링커 운영관리 시스템",
+  metadataBase: new URL(siteUrl),
+  title: appName,
+  description: appDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: appName,
+    description: appDescription,
+    url: "/",
+    siteName: appName,
+    images: [ogImage],
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: appName,
+    description: appDescription,
+    images: [ogImage],
+  },
 };
 
 export const viewport: Viewport = {
