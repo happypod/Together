@@ -12,7 +12,7 @@ export function PublicHeader({ activeMenuId }: PublicHeaderProps) {
     <header className="pub-header">
       <div className="pub-header-inner">
         <div className="pub-brand">
-          <Link className="pub-brand-link" href="/">
+          <Link className="pub-brand-link" href="/" prefetch>
             <span className="pub-brand-mark" aria-hidden="true">동행</span>
             <div className="pub-brand-text">
               <span className="pub-brand-sub">소원권역 공동예약형 생활이동</span>
@@ -27,6 +27,7 @@ export function PublicHeader({ activeMenuId }: PublicHeaderProps) {
               className="pub-nav-link"
               href={item.href}
               key={item.id}
+              prefetch
             >
               {item.label}
             </Link>

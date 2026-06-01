@@ -21,16 +21,16 @@ export function MobileStickyCta() {
 
   return (
     <div className="mobile-sticky-cta" aria-label="빠른 행동 버튼">
-      <Link className="mobile-sticky-btn mobile-sticky-btn--primary" href="/public/apply">
+      <Link className="mobile-sticky-btn mobile-sticky-btn--primary" href="/public/apply" prefetch>
         신청하기
       </Link>
-      <Link className="mobile-sticky-btn mobile-sticky-btn--secondary" href="/public/check">
+      <Link className="mobile-sticky-btn mobile-sticky-btn--secondary" href="/public/check" prefetch>
         신청 확인
       </Link>
-      <Link className="mobile-sticky-btn mobile-sticky-btn--secondary" href="/public/education">
+      <Link className="mobile-sticky-btn mobile-sticky-btn--secondary" href="/public/education" prefetch>
         교육
       </Link>
-      <Link className="mobile-sticky-btn mobile-sticky-btn--ghost" href="/public/contact">
+      <Link className="mobile-sticky-btn mobile-sticky-btn--ghost" href="/public/contact" prefetch>
         문의
       </Link>
     </div>

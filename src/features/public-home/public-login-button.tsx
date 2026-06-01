@@ -12,6 +12,7 @@ export async function PublicLoginButton() {
         className="pub-login-btn auth-action auth-action-primary"
         href="/resident"
         aria-label="주민 대시보드"
+        prefetch
       >
         <FaIcon name="resident" />
         <span className="pub-login-btn-text">주민</span>
@@ -20,6 +21,7 @@ export async function PublicLoginButton() {
         className="pub-login-btn auth-action auth-action-secondary"
         href="/linker"
         aria-label="동행링커 대시보드"
+        prefetch
       >
         <FaIcon name="car" />
         <span className="pub-login-btn-text">링커</span>

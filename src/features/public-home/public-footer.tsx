@@ -41,7 +41,7 @@ export function PublicFooter() {
           <ul className="site-footer-nav-list">
             {quickLinks.map((link) => (
               <li key={link.href}>
-                <Link className="site-footer-nav-link" href={link.href}>
+                <Link className="site-footer-nav-link" href={link.href} prefetch>
                   {link.label}
                 </Link>
               </li>
@@ -64,7 +64,7 @@ export function PublicFooter() {
             <div>
               <dt>운영관리 접속</dt>
               <dd>
-                <Link className="site-footer-admin-link" href="/admin">
+                <Link className="site-footer-admin-link" href="/admin" prefetch>
                   운영자 로그인 →
                 </Link>
               </dd>

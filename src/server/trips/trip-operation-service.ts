@@ -978,7 +978,7 @@ export async function listLinkers(filters: LinkerListFilters = {}) {
   const linkers = await prisma.linker.findMany({
     where: { AND: and },
     orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
-    take: 80,
+    take: 40,
   });
 
   return linkers.map(toLinkerItem);
@@ -995,7 +995,7 @@ export async function listAssignableLinkerOptions() {
       insuranceRegistered: true,
     },
     orderBy: [{ activityCount: "asc" }, { updatedAt: "desc" }],
-    take: 80,
+    take: 40,
   });
   return linkers.map(toLinkerOption);
 }
@@ -1051,7 +1051,7 @@ export async function listTripGroups(user: AuthUser, filters: TripGroupFilters =
   const groups = await prisma.mobilityGroup.findMany({
     where: { AND: and },
     orderBy: [{ serviceDate: "desc" }, { updatedAt: "desc" }],
-    take: 80,
+    take: 40,
     include: {
       linker: true,
       members: {

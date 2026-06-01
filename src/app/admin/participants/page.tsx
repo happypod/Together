@@ -62,7 +62,10 @@ export default async function ParticipantsPage() {
           </div>
           <div className="heading-actions" aria-label="관련 화면">
             <a className="secondary-action" href="/admin/requests">
-              주민 신청
+              주민 등록·신청
+            </a>
+            <a className="secondary-action" href="/admin/groups">
+              공동예약 편성
             </a>
             <a className="secondary-action" href="/admin/trips">
               동행링커

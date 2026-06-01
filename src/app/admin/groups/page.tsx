@@ -81,6 +81,14 @@ export default async function MobilityGroupsPage({ searchParams }: GroupsPagePro
               운영자가 직접 판단합니다.
             </p>
           </div>
+          <div className="heading-actions" aria-label="공동예약 관련 화면">
+            <a className="secondary-action" href="/admin/requests">
+              주민 신청 접수
+            </a>
+            <a className="secondary-action" href="/admin/participants">
+              사용자현황
+            </a>
+          </div>
         </section>
         {user && !canRead ? (
           <AccessDeniedPanel description="이 역할은 공동예약 그룹 정보를 볼 수 없습니다. 필요한 경우 운영 책임자에게 권한을 확인해 주세요." />

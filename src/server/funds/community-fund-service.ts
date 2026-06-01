@@ -287,7 +287,7 @@ export async function listCommunityFundRecords(filters: CommunityFundFilters = {
       month,
     },
     orderBy: [{ createdAt: "desc" }],
-    take: 80,
+    take: 40,
     include: {
       group: {
         select: {
@@ -331,7 +331,7 @@ export async function listCommunityFundGroupOptions(): Promise<CommunityFundGrou
       deletedAt: null,
     },
     orderBy: [{ serviceDate: "desc" }, { updatedAt: "desc" }],
-    take: 80,
+    take: 40,
     select: {
       id: true,
       groupName: true,

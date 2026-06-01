@@ -83,10 +83,13 @@ function filterPeriodEvents(events: CalendarEvent[], window: CalendarWindow) {
 }
 
 function EventCard({ event, compact = false }: { event: CalendarEvent; compact?: boolean }) {
+  const kindLabel =
+    event.kind === "education" ? "교육" : event.kind === "request" ? "신청" : "공동예약";
+
   return (
     <Link className={compact ? "calendar-event-chip" : "calendar-event-card"} href={event.href}>
       <span className="calendar-event-topline">
-        <span className="calendar-event-kind">{event.kind === "request" ? "신청" : "그룹"}</span>
+        <span className="calendar-event-kind">{kindLabel}</span>
         <mark className="status-badge" data-status={event.status}>
           {event.statusLabel}
         </mark>
@@ -95,12 +98,23 @@ function EventCard({ event, compact = false }: { event: CalendarEvent; compact?:
       {!compact ? (
         <>
           <span>{event.subtitle}</span>
-          <span>
-            {event.timeWindow} · {event.residentSummary} · {event.memberCount}명
-          </span>
-          <span>
-            {event.linkerName} · {event.taxiLabel}
-          </span>
+          {event.kind === "education" ? (
+            <>
+              <span>
+                {event.timeWindow} · {event.residentSummary}
+              </span>
+              <span>{event.taxiLabel}</span>
+            </>
+          ) : (
+            <>
+              <span>
+                {event.timeWindow} · {event.residentSummary} · {event.memberCount}명
+              </span>
+              <span>
+                {event.linkerName} · {event.taxiLabel}
+              </span>
+            </>
+          )}
         </>
       ) : (
         <span>
@@ -161,7 +175,7 @@ export function MobilityCalendarWorkspace({
           <input name="view" type="hidden" value={window.view} />
           <input name="date" type="hidden" value={window.anchorDate} />
           <label>
-            상태 필터
+            이동 상태 필터
             <select defaultValue={status} name="status">
               <option value="">전체 상태</option>
               {MOBILITY_STATUSES.map((item) => (
@@ -185,6 +199,10 @@ export function MobilityCalendarWorkspace({
         <div>
           <span>운행 그룹</span>
           <strong>{summary.groupCount}그룹</strong>
+        </div>
+        <div>
+          <span>교육 일정</span>
+          <strong>{summary.educationCount}건</strong>
         </div>
         <div>
           <span>택시 확인 필요</span>

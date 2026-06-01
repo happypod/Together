@@ -21,7 +21,7 @@ export async function AuthActions({ className }: AuthActionsProps) {
   if (!user) {
     return (
       <div className={classes} aria-label="로그인">
-        <Link aria-label="로그인" className="auth-action auth-action-primary" href="/login">
+        <Link aria-label="로그인" className="auth-action auth-action-primary" href="/login" prefetch>
           <FaIcon name="login" />
           <span className="auth-action-text">로그인</span>
         </Link>

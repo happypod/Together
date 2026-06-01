@@ -3847,6 +3847,7 @@ label.check-row {
 }
 
 .status-badge[data-status="REQUESTED"],
+.status-badge[data-status="OPEN"],
 .status-badge[data-status="RECRUITING"],
 .status-badge[data-status="GROUP_READY"],
 .status-badge[data-status="LINKER_RECRUITING"],
@@ -3858,6 +3859,7 @@ label.check-row {
 
 .status-badge[data-status="TAXI_REQUESTED"],
 .status-badge[data-status="TAXI_CONFIRMED"],
+.status-badge[data-status="PRE_APPLY"],
 .status-badge[data-status="IN_PROGRESS"] {
   border-color: #bed6f7;
   background: #e8f1ff;
@@ -3865,6 +3867,7 @@ label.check-row {
 }
 
 .status-badge[data-status="RETURN_CONFIRMED"],
+.status-badge[data-status="COMPLETED"],
 .status-badge[data-status="SETTLED"],
 .status-badge[data-status="REPORTED"] {
   border-color: #d6c48e;
@@ -3877,6 +3880,7 @@ label.check-row {
 .status-badge[data-status="CANCELED_BY_TAXI"],
 .status-badge[data-status="CANCELED_BY_WEATHER"],
 .status-badge[data-status="CANCELED_BY_OTHER"],
+.status-badge[data-status="CLOSED"],
 .status-badge[data-status="INCIDENT_REPORTED"],
 .status-badge[data-status="COMPLAINT_REPORTED"],
 .status-badge[data-status="NO_SHOW"],
@@ -5079,79 +5083,6 @@ html {
   outline: none;
 }
 
-@keyframes swipe-page-exit-forward {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    opacity: 0.52;
-    transform: translate3d(-18%, 0, 0);
-  }
-}
-
-@keyframes swipe-page-exit-back {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    opacity: 0.52;
-    transform: translate3d(18%, 0, 0);
-  }
-}
-
-@keyframes swipe-page-enter-forward {
-  from {
-    opacity: 0.56;
-    transform: translate3d(16%, 0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes swipe-page-enter-back {
-  from {
-    opacity: 0.56;
-    transform: translate3d(-16%, 0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@media (max-width: 560px) {
-  html[data-swipe-transition] body,
-  html[data-swipe-enter] body {
-    overflow-x: hidden;
-  }
-
-  html[data-swipe-transition] #main-content,
-  html[data-swipe-enter] #main-content {
-    will-change: transform, opacity;
-    pointer-events: none;
-  }
-
-  html[data-swipe-transition="forward"] #main-content {
-    animation: swipe-page-exit-forward 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-
-  html[data-swipe-transition="back"] #main-content {
-    animation: swipe-page-exit-back 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-
-  html[data-swipe-enter="forward"] #main-content {
-    animation: swipe-page-enter-forward 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  html[data-swipe-enter="back"] #main-content {
-    animation: swipe-page-enter-back 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-}
-
 /* 본문 바로가기 링크 */
 .skip-link {
   position: absolute;
@@ -5640,13 +5571,6 @@ html {
   .skip-link {
     transition: none;
   }
-
-  html[data-swipe-transition] #main-content,
-  html[data-swipe-enter] #main-content {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
 }
 
 /* 태블릿 이하: 접근성 버튼은 아이콘 중심으로 */
@@ -5778,7 +5702,9 @@ html {
     right: 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    /* 항목 수와 무관하게 항상 한 줄에 균등 배치 (현재 9개 아이콘) */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     background: rgba(255, 255, 255, 0.97);
     border-top: 1px solid var(--line);
     box-shadow: 0 -4px 16px rgba(23, 33, 29, 0.08);
@@ -5788,8 +5714,9 @@ html {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 60px;
-    padding: 8px 2px;
+    min-width: 0;
+    min-height: 58px;
+    padding: 8px 1px;
     color: #31423b;
     font-size: 11px;
     font-weight: 800;
@@ -5798,7 +5725,7 @@ html {
     color: var(--blue);
   }
   .bottom-nav-icon {
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1;
   }
   .bottom-nav-text {
@@ -5888,7 +5815,7 @@ html {
 }
 .calendar-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 .calendar-summary-grid div {
@@ -9484,5 +9411,75 @@ textarea.pub-input {
   .public-admin-form button,
   .public-admin-inline-form button {
     width: 100%;
+  }
+}
+
+/* =====================================================================
+   라우트 전환 로딩 스켈레톤 (loading.tsx)
+   메뉴 이동 시 즉시 표시되어 체감 속도를 높인다.
+   ===================================================================== */
+.route-loading {
+  display: grid;
+  place-items: center;
+  min-height: 60svh;
+  padding: 48px 20px;
+}
+.route-loading--admin {
+  min-height: calc(100svh - 200px);
+}
+.route-loading-inner {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+.route-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 5px solid var(--line);
+  border-top-color: var(--teal);
+  animation: route-loading-spin 0.7s linear infinite;
+}
+.route-loading-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 800;
+}
+.route-loading-skeleton {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+.route-loading-bar {
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-soft) 25%, var(--line) 37%, var(--surface-soft) 63%);
+  background-size: 400% 100%;
+  animation: route-loading-shimmer 1.4s ease infinite;
+}
+.route-loading-bar--lg { width: 100%; }
+.route-loading-bar--md { width: 80%; justify-self: start; }
+.route-loading-bar--sm { width: 55%; justify-self: start; }
+
+@keyframes route-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes route-loading-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-spinner {
+    animation-duration: 1.6s;
+  }
+  .route-loading-bar {
+    animation: none;
+    background: var(--surface-soft);
   }
 }

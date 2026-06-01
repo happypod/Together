@@ -45,7 +45,7 @@ export function WeeklyRecruitmentList({ applyHref = "/public/apply", rows }: Pro
                       {row.recruitmentStatusLabel}
                     </span>
                     {row.canApply ? (
-                      <Link className="pub-cta-small" href={applyHref}>
+                      <Link className="pub-cta-small" href={applyHref} prefetch>
                         함께 신청하기
                       </Link>
                     ) : null}

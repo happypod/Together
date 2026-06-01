@@ -11,14 +11,12 @@ import {
   type RoundingPolicy,
   type SettlementMode,
 } from "@/domain/definitions";
+import { getKoreaDateKey } from "@/domain/korea-date";
 import { assertNoForbiddenSensitiveInfo, maskPhone } from "@/domain/privacy";
 import { writeAuditLog } from "@/server/audit/audit-log";
 import { prisma } from "@/server/db/prisma";
 import { recordCsvExportAudit } from "@/server/reports/export-audit";
-import {
-  calculateDashboardSummary,
-  getMonthRange,
-} from "@/server/reports/report-calculator";
+import { getMonthRange } from "@/server/reports/report-calculator";
 import { calculateSettlement } from "@/server/settlements/calculator";
 import { DEFAULT_OPERATING_SETTINGS } from "@/server/settings/defaults";
 import { getOperatingSettings } from "@/server/settings/settings-service";
@@ -171,6 +169,13 @@ export type DashboardSummaryView = {
 };
 
 const performanceStatuses = ["RETURN_CONFIRMED", "SETTLED", "REPORTED"] as const;
+const canceledStatuses = [
+  "CANCELED_BY_RESIDENT",
+  "CANCELED_BY_OPERATOR",
+  "CANCELED_BY_TAXI",
+  "CANCELED_BY_WEATHER",
+  "CANCELED_BY_OTHER",
+] as const;
 const numberFormatter = new Intl.NumberFormat("ko-KR");
 
 function cleanText(value: unknown, maxLength: number) {
@@ -522,7 +527,7 @@ export async function listSettlementGroups(filters: SettlementListFilters = {}) 
   const groups = await prisma.mobilityGroup.findMany({
     where: { AND: and },
     orderBy: [{ serviceDate: "desc" }, { updatedAt: "desc" }],
-    take: 80,
+    take: 40,
     include: {
       members: {
         orderBy: { pickupOrder: "asc" },
@@ -580,7 +585,7 @@ export async function listMonthlySettlements(
   const groups = await prisma.mobilityGroup.findMany({
     where: { AND: and },
     orderBy: [{ serviceDate: "asc" }, { updatedAt: "desc" }],
-    take: 160,
+    take: 80,
     include: {
       members: {
         orderBy: { pickupOrder: "asc" },
@@ -818,81 +823,79 @@ export async function recordSettlementCsvPreparation(
 }
 
 export async function getDashboardSummaryView(): Promise<DashboardSummaryView> {
-  const [requests, groups, settlements, linkers, settings] = await Promise.all([
-    prisma.mobilityRequest.findMany({
-      where: { deletedAt: null },
-      orderBy: { desiredDate: "desc" },
-      take: 120,
-      select: {
-        desiredDate: true,
-        status: true,
+  const todayKey = getKoreaDateKey();
+  const today = new Date(`${todayKey}T00:00:00.000Z`);
+  const nextDay = new Date(today);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+  const [
+    todayRequestCount,
+    todayGroupCount,
+    returnConfirmedCount,
+    unsettledCount,
+    activeLinkerCount,
+    settledAggregate,
+    settings,
+  ] = await Promise.all([
+    prisma.mobilityRequest.count({
+      where: {
+        deletedAt: null,
+        desiredDate: { gte: today, lt: nextDay },
+        status: { notIn: [...canceledStatuses] },
       },
     }),
-    prisma.mobilityGroup.findMany({
-      where: { deletedAt: null },
-      orderBy: { serviceDate: "desc" },
-      take: 120,
-      include: {
-        members: {
-          select: {
-            residentId: true,
-            memberStatus: true,
-            returnConfirmedAt: true,
-          },
-        },
-        settlement: {
-          select: {
-            groupId: true,
-            totalFare: true,
-            residentTotalShare: true,
-            residentPerPersonShare: true,
-            anchorSupportAmount: true,
-            isSettled: true,
-          },
-        },
+    prisma.mobilityGroup.count({
+      where: {
+        deletedAt: null,
+        serviceDate: { gte: today, lt: nextDay },
       },
     }),
-    prisma.settlement.findMany({
-      orderBy: { settledAt: "desc" },
-      take: 120,
-      select: {
-        groupId: true,
-        totalFare: true,
-        residentTotalShare: true,
-        residentPerPersonShare: true,
+    prisma.mobilityGroup.count({
+      where: {
+        deletedAt: null,
+        status: { in: [...performanceStatuses] },
+      },
+    }),
+    prisma.mobilityGroup.count({
+      where: {
+        deletedAt: null,
+        status: { in: [...performanceStatuses] },
+        OR: [
+          { settlement: { is: null } },
+          { settlement: { is: { isSettled: false } } },
+        ],
+      },
+    }),
+    prisma.linker.count({
+      where: {
+        deletedAt: null,
+        status: { in: ["AVAILABLE", "ACTIVE"] },
+      },
+    }),
+    prisma.settlement.aggregate({
+      where: { isSettled: true },
+      _count: { _all: true },
+      _sum: {
         anchorSupportAmount: true,
-        isSettled: true,
+        totalFare: true,
       },
-    }),
-    prisma.linker.findMany({
-      where: { deletedAt: null },
-      select: {
-        id: true,
-        status: true,
+      _avg: {
+        residentPerPersonShare: true,
       },
     }),
     getOperatingSettings(),
   ]);
-
-  const summary = calculateDashboardSummary({
-    requests,
-    groups,
-    settlements,
-    linkers,
-  });
-  const settledItems = settlements.filter((settlement) => settlement.isSettled);
-  const totalFare = settledItems.reduce((sum, settlement) => sum + settlement.totalFare, 0);
-  const anchorSupport = settledItems.reduce(
-    (sum, settlement) => sum + settlement.anchorSupportAmount,
-    0,
-  );
-  const averageResidentShare =
-    settledItems.length > 0
-      ? Math.round(
-          settledItems.reduce((sum, settlement) => sum + settlement.residentPerPersonShare, 0) /
-            settledItems.length,
-        )
-      : 0;
+  const summary = {
+    activeLinkerCount,
+    returnConfirmedCount,
+    todayGroupCount,
+    todayRequestCount,
+    unsettledCount,
+  };
+  const totalFare = settledAggregate._sum.totalFare ?? 0;
+  const anchorSupport = settledAggregate._sum.anchorSupportAmount ?? 0;
+  const averageResidentShare = Math.round(settledAggregate._avg.residentPerPersonShare ?? 0);
+  const settledCount = settledAggregate._count._all;
 
   return {
     metrics: [
@@ -947,7 +950,7 @@ export async function getDashboardSummaryView(): Promise<DashboardSummaryView> {
       {
         label: "정산 완료 요금",
         value: formatKrw(totalFare),
-        note: `${settledItems.length}건 기준`,
+        note: `${settledCount}건 기준`,
       },
       {
         label: "앵커 지원금",

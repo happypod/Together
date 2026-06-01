@@ -120,7 +120,7 @@ function PublicMenuOverview() {
         </div>
         <div className="pub-menu-grid">
           {publicMenuItems.map((item) => (
-            <Link className="pub-menu-card" href={item.href} key={item.id}>
+            <Link className="pub-menu-card" href={item.href} key={item.id} prefetch>
               <span className="pub-menu-card-label">{item.label}</span>
               <span className="pub-menu-card-desc">{item.description}</span>
             </Link>

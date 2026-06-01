@@ -91,7 +91,7 @@ export default async function ResidentRequestsPage({ searchParams }: RequestsPag
   }
 
   return (
-    <AppShell currentHref="/admin/requests">
+    <AppShell currentHref="/admin/participants">
       <main className="page request-page">
         <section className="page-heading" aria-labelledby="requests-title">
           <div>

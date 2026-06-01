@@ -188,7 +188,7 @@ export async function listResidentOptions(): Promise<ResidentOption[]> {
   const residents = await prisma.resident.findMany({
     where: { deletedAt: null },
     orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
-    take: 80,
+    take: 40,
     select: {
       id: true,
       name: true,
@@ -242,7 +242,7 @@ export async function listMobilityRequests(
   const requests = await prisma.mobilityRequest.findMany({
     where: { AND: and },
     orderBy: [{ desiredDate: "desc" }, { createdAt: "desc" }],
-    take: 80,
+    take: 40,
     include: {
       resident: {
         select: {

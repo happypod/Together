@@ -270,7 +270,7 @@ export async function listGroupCandidateRequests(): Promise<GroupCandidateReques
       },
     },
     orderBy: [{ desiredDate: "asc" }, { createdAt: "asc" }],
-    take: 80,
+    take: 40,
     include: {
       resident: {
         select: {
@@ -323,7 +323,7 @@ export async function listMobilityGroups(
   const groups = await prisma.mobilityGroup.findMany({
     where: { AND: and },
     orderBy: [{ serviceDate: "desc" }, { createdAt: "desc" }],
-    take: 80,
+    take: 40,
     include: {
       members: {
         orderBy: { pickupOrder: "asc" },

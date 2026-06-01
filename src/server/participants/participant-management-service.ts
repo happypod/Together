@@ -432,7 +432,7 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
     prisma.resident.findMany({
       where: { deletedAt: null },
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
-      take: 80,
+      take: 40,
       include: {
         user: {
           select: {
@@ -468,7 +468,7 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
         },
         surveys: {
           orderBy: [{ createdAt: "desc" }],
-          take: 12,
+          take: 6,
           select: {
             createdAt: true,
             emotionalRecovery: true,
@@ -481,7 +481,7 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
     prisma.linker.findMany({
       where: { deletedAt: null },
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
-      take: 80,
+      take: 40,
       include: {
         user: {
           select: {
@@ -525,7 +525,7 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
       ],
     },
     orderBy: [{ createdAt: "desc" }],
-    take: 160,
+    take: 80,
     select: {
       createdAt: true,
       id: true,

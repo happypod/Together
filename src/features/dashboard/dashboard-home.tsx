@@ -20,11 +20,14 @@ export function DashboardHome({ canManageUsers = false, summary, notice }: Dashb
             </p>
           </div>
           <div className="heading-actions" aria-label="주요 작업">
-            <a className="primary-action" href="/admin/requests">
-              주민 등록
+            <a className="primary-action" href="/admin/participants">
+              사용자현황
             </a>
             <a className="secondary-action" href="/admin/groups">
               공동예약
+            </a>
+            <a className="secondary-action" href="/admin/calendar">
+              통합 캘린더
             </a>
             {canManageUsers ? (
               <a className="secondary-action" href="/admin/users">

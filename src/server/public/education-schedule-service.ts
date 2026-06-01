@@ -325,7 +325,7 @@ export async function listPublicEducationSchedules(): Promise<PublicEducationSch
 export async function listEducationSchedulesAdminRows(): Promise<EducationScheduleAdminRow[]> {
   const schedules = await prisma.educationSchedule.findMany({
     orderBy: [{ scheduleDate: "desc" }, { createdAt: "desc" }],
-    take: 120,
+    take: 60,
     include: {
       createdBy: {
         select: {

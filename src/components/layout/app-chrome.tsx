@@ -181,6 +181,13 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
     applyTheme("clear");
   }, [applyContrast, applyFontScale, applyTheme]);
 
+  const prefetchNavigation = useCallback(() => {
+    if (!showNavigationShortcuts) {
+      return;
+    }
+    navigationItems.forEach((item) => router.prefetch(item.href));
+  }, [router, showNavigationShortcuts]);
+
   const closeSettings = useCallback(() => {
     settingsDetailsRef.current?.removeAttribute("open");
     setSettingsOpen(false);
@@ -207,6 +214,7 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
             const item = navigationItems.find((nav) => nav.hotkey === event.key);
             if (item) {
               event.preventDefault();
+              router.prefetch(item.href);
               router.push(item.href);
             }
           }
@@ -217,6 +225,7 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
           : undefined;
         if (shortcutItem) {
           event.preventDefault();
+          router.prefetch(shortcutItem.href);
           router.push(shortcutItem.href);
           return;
         }
@@ -356,7 +365,14 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
   return (
     <details
       className={`mobile-settings app-settings app-settings--${mode}`}
-      onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
+      onPointerEnter={prefetchNavigation}
+      onToggle={(event) => {
+        const open = event.currentTarget.open;
+        setSettingsOpen(open);
+        if (open) {
+          prefetchNavigation();
+        }
+      }}
       ref={settingsDetailsRef}
     >
       <summary
@@ -364,6 +380,7 @@ export function AppChrome({ mode = "admin" }: AppChromeProps) {
         aria-expanded={settingsOpen}
         aria-label={settingsOpen ? "화면 설정 닫기" : "화면 설정 열기"}
         className="mobile-settings-trigger"
+        onFocus={prefetchNavigation}
         title="화면 설정"
       >
         <FaIcon name="sliders" />

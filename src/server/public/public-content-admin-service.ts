@@ -331,7 +331,7 @@ export async function listPublicContentAdminView(user: AuthUser): Promise<Public
     }),
     prisma.educationApplication.findMany({
       orderBy: [{ createdAt: "desc" }],
-      take: 80,
+      take: 40,
       include: {
         handledBy: {
           select: {
@@ -366,7 +366,7 @@ export async function listNoticeAdminView(user: AuthUser): Promise<NoticeAdminVi
 
   const notices = await prisma.notice.findMany({
     orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
-    take: 80,
+    take: 40,
     include: {
       createdBy: {
         select: {
@@ -396,7 +396,7 @@ export async function listEducationApplicationsAdminView(
   const [educationApplications, educationSchedules] = await Promise.all([
     prisma.educationApplication.findMany({
       orderBy: [{ createdAt: "desc" }],
-      take: 120,
+      take: 60,
       include: {
         handledBy: {
           select: {

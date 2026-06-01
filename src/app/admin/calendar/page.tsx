@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AccessDeniedPanel } from "@/components/layout/access-denied-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { hasPermission } from "@/domain/auth/permissions";
@@ -50,12 +51,13 @@ export default async function MobilityCalendarPage({ searchParams }: CalendarPag
     hasPermission(user, "request:read") ||
     hasPermission(user, "group:read") ||
     hasPermission(user, "trip:read") ||
-    hasPermission(user, "taxi:read");
+    hasPermission(user, "taxi:read") ||
+    hasPermission(user, "setting:manage");
 
   let events = filterPreviewEvents(previewCalendarEvents, window);
   let notice = user
-    ? "미리보기 이동 캘린더 데이터가 표시됩니다."
-    : "로그인 후 실제 이동 일정을 볼 수 있습니다.";
+    ? "미리보기 통합 캘린더 데이터가 표시됩니다."
+    : "로그인 후 실제 공동예약과 교육 일정을 볼 수 있습니다.";
 
   if (canReadCalendar) {
     try {
@@ -63,7 +65,7 @@ export default async function MobilityCalendarPage({ searchParams }: CalendarPag
       notice = "";
     } catch {
       events = filterPreviewEvents(previewCalendarEvents, window);
-      notice = "미리보기 이동 캘린더 데이터가 표시됩니다.";
+      notice = "미리보기 통합 캘린더 데이터가 표시됩니다.";
     }
   }
 
@@ -72,22 +74,30 @@ export default async function MobilityCalendarPage({ searchParams }: CalendarPag
   );
 
   return (
-    <AppShell currentHref="/admin/calendar">
+    <AppShell currentHref="/admin">
       <main className="page calendar-page">
         <section className="page-heading" aria-labelledby="calendar-title">
           <div>
-            <p className="eyebrow">이동 캘린더</p>
-            <h1 id="calendar-title">월간·주간·일간 이동 일정</h1>
+            <p className="eyebrow">대시보드</p>
+            <h1 id="calendar-title">통합 운영 캘린더</h1>
             <p className="lead">
-              신청, 그룹, 택시예약 상태를 날짜별로 확인합니다.
+              공동예약 신청, 그룹 편성, 택시예약, 교육 일정을 날짜별로 확인합니다.
               <br />
-              모바일에서는 일정 목록 중심으로 표시합니다.
+              캘린더는 대시보드 하위 화면으로 관리합니다.
             </p>
+          </div>
+          <div className="heading-actions" aria-label="통합 캘린더 관련 화면">
+            <Link className="secondary-action" href="/admin/groups">
+              공동예약 관리
+            </Link>
+            <Link className="secondary-action" href="/admin/education-applications">
+              교육 일정 관리
+            </Link>
           </div>
         </section>
 
         {user && !canReadCalendar ? (
-          <AccessDeniedPanel description="이 역할은 이동 캘린더를 볼 수 없습니다. 필요한 경우 운영 책임자에게 권한을 확인해 주세요." />
+          <AccessDeniedPanel description="이 역할은 통합 운영 캘린더를 볼 수 없습니다. 필요한 경우 운영 책임자에게 권한을 확인해 주세요." />
         ) : (
           <MobilityCalendarWorkspace
             events={events}

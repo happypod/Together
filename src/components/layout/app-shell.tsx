@@ -46,6 +46,7 @@ export function AppShell({ children, currentHref = "/" }: AppShellProps) {
               className="nav-link"
               href={item.href}
               key={item.label}
+              prefetch
               title={`${item.label} (Alt + ${item.hotkey})`}
             >
               <span aria-hidden="true" className="nav-icon">
@@ -67,6 +68,7 @@ export function AppShell({ children, currentHref = "/" }: AppShellProps) {
             className="bottom-nav-link"
             href={item.href}
             key={item.label}
+            prefetch
           >
             <span aria-hidden="true" className="bottom-nav-icon">
               <FaIcon name={item.icon} />

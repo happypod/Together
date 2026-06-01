@@ -1,4 +1,8 @@
 import {
+  type EducationCourseType,
+  type EducationScheduleStatus,
+} from "@prisma/client";
+import {
   MOBILITY_STATUS_LABELS,
   MOBILITY_STATUSES,
   type MobilityStatus,
@@ -16,7 +20,7 @@ export const CALENDAR_VIEWS = ["month", "week", "day"] as const;
 
 export type CalendarView = (typeof CALENDAR_VIEWS)[number];
 
-export type CalendarEventKind = "request" | "group";
+export type CalendarEventKind = "request" | "group" | "education";
 
 export type CalendarEvent = {
   id: string;
@@ -25,7 +29,7 @@ export type CalendarEvent = {
   title: string;
   subtitle: string;
   timeWindow: string;
-  status: MobilityStatus;
+  status: MobilityStatus | EducationScheduleStatus;
   statusLabel: string;
   href: string;
   memberCount: number;
@@ -57,6 +61,7 @@ export type CalendarWindow = {
 export type CalendarSummary = {
   requestCount: number;
   groupCount: number;
+  educationCount: number;
   taxiPendingCount: number;
   linkerPendingCount: number;
 };
@@ -71,6 +76,18 @@ const monthTitleFormatter = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
   month: "long",
 });
+
+const EDUCATION_COURSE_LABELS = {
+  COLLECTIVE: "집체교육",
+  LINKER_QUALIFICATION: "동행링커 자격과정",
+} as const satisfies Record<EducationCourseType, string>;
+
+const EDUCATION_STATUS_LABELS = {
+  OPEN: "접수 중",
+  PRE_APPLY: "사전 신청",
+  CLOSED: "마감",
+  COMPLETED: "완료",
+} as const satisfies Record<EducationScheduleStatus, string>;
 
 function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
@@ -217,8 +234,9 @@ export async function listCalendarEvents(
     hasPermission(user, "group:read") ||
     hasPermission(user, "trip:read") ||
     hasPermission(user, "taxi:read");
+  const canReadEducation = hasPermission(user, "setting:manage") || hasPermission(user, "request:read");
 
-  if (!canReadRequests && !canReadGroups) {
+  if (!canReadRequests && !canReadGroups && !canReadEducation) {
     throw new AuthorizationError();
   }
 
@@ -227,7 +245,7 @@ export async function listCalendarEvents(
   const start = dateFromKey(window.gridStart);
   const end = dateFromKey(window.gridEnd);
 
-  const [requests, groups] = await Promise.all([
+  const [requests, groups, educationSchedules] = await Promise.all([
     canReadRequests
       ? prisma.mobilityRequest.findMany({
           where: {
@@ -237,7 +255,7 @@ export async function listCalendarEvents(
             groupMembers: { none: {} },
           },
           orderBy: [{ desiredDate: "asc" }, { createdAt: "asc" }],
-          take: 160,
+          take: 80,
           include: {
             resident: {
               select: {
@@ -257,7 +275,7 @@ export async function listCalendarEvents(
             ...(status ? { status } : {}),
           },
           orderBy: [{ serviceDate: "asc" }, { timeWindow: "asc" }, { updatedAt: "desc" }],
-          take: 180,
+          take: 80,
           include: {
             linker: { select: { name: true } },
             taxiReservation: { select: { reservationConfirmed: true } },
@@ -273,6 +291,15 @@ export async function listCalendarEvents(
               },
             },
           },
+        })
+      : Promise.resolve([]),
+    canReadEducation
+      ? prisma.educationSchedule.findMany({
+          where: {
+            scheduleDate: { gte: start, lt: end },
+          },
+          orderBy: [{ scheduleDate: "asc" }, { createdAt: "asc" }],
+          take: 60,
         })
       : Promise.resolve([]),
   ]);
@@ -316,7 +343,28 @@ export async function listCalendarEvents(
     };
   });
 
-  return [...requestEvents, ...groupEvents].sort((left, right) => {
+  const educationEvents: CalendarEvent[] = educationSchedules.map((schedule) => {
+    const date = formatDateOnly(schedule.scheduleDate);
+
+    return {
+      id: schedule.id,
+      kind: "education",
+      date,
+      title: schedule.title,
+      subtitle: `${EDUCATION_COURSE_LABELS[schedule.courseType]} · ${schedule.target}`,
+      timeWindow: schedule.time,
+      status: schedule.status,
+      statusLabel: EDUCATION_STATUS_LABELS[schedule.status],
+      href: "/admin/education-applications",
+      memberCount: 0,
+      residentSummary: schedule.target,
+      linkerName: EDUCATION_COURSE_LABELS[schedule.courseType],
+      taxiState: "none",
+      taxiLabel: `${schedule.place} · ${schedule.isVisible ? "공개" : "비공개"}`,
+    };
+  });
+
+  return [...requestEvents, ...groupEvents, ...educationEvents].sort((left, right) => {
     if (left.date !== right.date) {
       return left.date.localeCompare(right.date);
     }
@@ -331,6 +379,7 @@ export function summarizeCalendarEvents(events: CalendarEvent[]): CalendarSummar
   return {
     requestCount: events.filter((event) => event.kind === "request").length,
     groupCount: events.filter((event) => event.kind === "group").length,
+    educationCount: events.filter((event) => event.kind === "education").length,
     taxiPendingCount: events.filter(
       (event) => event.kind === "group" && event.taxiState !== "confirmed",
     ).length,
@@ -359,6 +408,22 @@ export const previewCalendarEvents: CalendarEvent[] = [
     linkerName: "미배정",
     taxiState: "none",
     taxiLabel: "택시 미요청",
+  },
+  {
+    id: "preview-calendar-education",
+    kind: "education",
+    date: previewToday,
+    title: "소원권역 동행이동 OS 집체교육",
+    subtitle: "집체교육 · 주민, 보호자, 동행자",
+    timeWindow: "오전 10:00",
+    status: "OPEN",
+    statusLabel: EDUCATION_STATUS_LABELS.OPEN,
+    href: "/admin/education-applications",
+    memberCount: 0,
+    residentSummary: "주민, 보호자, 동행자",
+    linkerName: "집체교육",
+    taxiState: "none",
+    taxiLabel: "소원권역 커뮤니티센터 · 공개",
   },
   {
     id: "preview-calendar-group",

@@ -16,13 +16,13 @@ export function HeroSection() {
             운영관리 서비스입니다.
           </p>
           <div className="pub-hero-cta">
-            <Link className="pub-cta-primary" href="/public/apply">
+            <Link className="pub-cta-primary" href="/public/apply" prefetch>
               공동예약 신청하기
             </Link>
-            <Link className="pub-cta-secondary" href="/public/apply">
+            <Link className="pub-cta-secondary" href="/public/apply" prefetch>
               보호자가 대신 신청하기
             </Link>
-            <Link className="pub-cta-ghost" href="/public/check">
+            <Link className="pub-cta-ghost" href="/public/check" prefetch>
               내 신청 확인하기
             </Link>
           </div>
