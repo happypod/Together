@@ -5386,6 +5386,7 @@ html {
   padding: 10px 18px;
   font-weight: 800;
   cursor: pointer;
+  text-decoration: none;
 }
 .tab-trigger:hover {
   background: var(--surface-soft);
@@ -5422,6 +5423,13 @@ html {
 }
 .tabpanel {
   outline: none;
+}
+.dashboard-tabs {
+  margin-bottom: 20px;
+}
+.dashboard-tabpanel {
+  display: grid;
+  gap: 20px;
 }
 .tabpanel .trip-panel,
 .tabpanel .settlement-panel {

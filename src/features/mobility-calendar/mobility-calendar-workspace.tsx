@@ -57,11 +57,11 @@ function dayNumber(day: string) {
 }
 
 function buildHref(view: CalendarView, date: string, status?: string) {
-  const params = new URLSearchParams({ view, date });
+  const params = new URLSearchParams({ tab: "calendar", view, date });
   if (status) {
     params.set("status", status);
   }
-  return `/admin/calendar?${params.toString()}`;
+  return `/admin?${params.toString()}`;
 }
 
 function isInPeriod(day: string, window: CalendarWindow) {
@@ -171,7 +171,8 @@ export function MobilityCalendarWorkspace({
             오늘
           </Link>
         </div>
-        <form action="/admin/calendar" className="calendar-filter-form">
+        <form action="/admin" className="calendar-filter-form">
+          <input name="tab" type="hidden" value="calendar" />
           <input name="view" type="hidden" value={window.view} />
           <input name="date" type="hidden" value={window.anchorDate} />
           <label>

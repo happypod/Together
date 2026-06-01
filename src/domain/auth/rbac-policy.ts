@@ -89,7 +89,7 @@ export const ADMIN_ROUTE_ACCESS_RULES = [
   {
     id: "calendar",
     label: "캘린더",
-    href: "/admin/calendar",
+    href: "/admin?tab=calendar",
     anyPermission: ["request:read", "group:read", "trip:read", "taxi:read"],
   },
   {
