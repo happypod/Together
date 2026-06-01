@@ -11,6 +11,7 @@ import {
   type LinkerUserStatusRow,
   type ParticipantActivityItem,
   type ParticipantManagementView,
+  type ParticipantManagementTab,
   type ParticipantNoticeItem,
   type ResidentUserStatusRow,
 } from "@/server/participants/participant-management-service";
@@ -50,7 +51,9 @@ export function ParticipantManagementWorkspace({
         <ResidentPanel
           canManage={view.canManageResidents}
           formAction={formAction}
+          linkerQuery={view.filters.linkerQuery}
           pending={pending}
+          query={view.filters.residentQuery}
           rows={view.residentRows}
         />
       ),
@@ -64,7 +67,9 @@ export function ParticipantManagementWorkspace({
         <LinkerPanel
           canManage={view.canManageLinkers}
           formAction={formAction}
+          query={view.filters.linkerQuery}
           pending={pending}
+          residentQuery={view.filters.residentQuery}
           rows={view.linkerRows}
         />
       ),
@@ -91,7 +96,12 @@ export function ParticipantManagementWorkspace({
         <SummaryCard label="개인 공지" value={`${view.summary.noticeCount}건`} />
       </section>
 
-      <Tabs ariaLabel="주민 및 링커 사용자현황 메뉴" defaultTabId="residents" tabs={tabs} />
+      <Tabs
+        ariaLabel="주민 및 링커 사용자현황 메뉴"
+        defaultTabId={view.filters.tab}
+        key={`${view.filters.tab}-${view.filters.residentQuery}-${view.filters.linkerQuery}`}
+        tabs={tabs}
+      />
     </div>
   );
 }
@@ -116,12 +126,16 @@ function SummaryCard({
 function ResidentPanel({
   canManage,
   formAction,
+  linkerQuery,
   pending,
+  query,
   rows,
 }: {
   canManage: boolean;
   formAction: (formData: FormData) => void;
+  linkerQuery: string;
   pending: boolean;
+  query: string;
   rows: ResidentUserStatusRow[];
 }) {
   return (
@@ -131,6 +145,12 @@ function ResidentPanel({
         <h2 id="resident-users-title">기본 정보, 활동내역, 계정 관리</h2>
         <p>관리자가 직접 주민 정보를 입력하고 저장·수정·초기화합니다.</p>
       </div>
+      <ParticipantSearchForm
+        activeTab="residents"
+        otherQuery={linkerQuery}
+        query={query}
+        resultCount={rows.length}
+      />
       <ResidentProfileForm canManage={canManage} formAction={formAction} pending={pending} />
       <div className="participant-card-list">
         {rows.length > 0 ? (
@@ -154,12 +174,16 @@ function ResidentPanel({
 function LinkerPanel({
   canManage,
   formAction,
+  query,
   pending,
+  residentQuery,
   rows,
 }: {
   canManage: boolean;
   formAction: (formData: FormData) => void;
+  query: string;
   pending: boolean;
+  residentQuery: string;
   rows: LinkerUserStatusRow[];
 }) {
   return (
@@ -168,6 +192,12 @@ function LinkerPanel({
         <p className="eyebrow">링커 사용자현황</p>
         <h2 id="linker-users-title">활동 준비, 교육, 배정 이력 관리</h2>
       </div>
+      <ParticipantSearchForm
+        activeTab="linkers"
+        otherQuery={residentQuery}
+        query={query}
+        resultCount={rows.length}
+      />
       <LinkerProfileForm canManage={canManage} formAction={formAction} pending={pending} />
       <div className="participant-card-list">
         {rows.length > 0 ? (
@@ -185,6 +215,69 @@ function LinkerPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function buildClearSearchHref(activeTab: ParticipantManagementTab, otherQuery: string) {
+  const params = new URLSearchParams({ tab: activeTab });
+  if (activeTab === "residents" && otherQuery) {
+    params.set("linkerQuery", otherQuery);
+  }
+  if (activeTab === "linkers" && otherQuery) {
+    params.set("residentQuery", otherQuery);
+  }
+  return `/admin/participants?${params.toString()}`;
+}
+
+function ParticipantSearchForm({
+  activeTab,
+  otherQuery,
+  query,
+  resultCount,
+}: {
+  activeTab: ParticipantManagementTab;
+  otherQuery: string;
+  query: string;
+  resultCount: number;
+}) {
+  const isResident = activeTab === "residents";
+  const inputId = isResident ? "participant-resident-search" : "participant-linker-search";
+  const queryName = isResident ? "residentQuery" : "linkerQuery";
+  const otherQueryName = isResident ? "linkerQuery" : "residentQuery";
+  const label = isResident ? "주민 검색" : "링커 검색";
+  const placeholder = isResident ? "이름, 마을, 연락처, 이메일" : "이름, 마을, 연락처, 희망 분야, 이메일";
+  const targetLabel = isResident ? "주민" : "링커";
+
+  return (
+    <form action="/admin/participants" className="participant-search-form">
+      <input name="tab" type="hidden" value={activeTab} />
+      {otherQuery ? <input name={otherQueryName} type="hidden" value={otherQuery} /> : null}
+      <label htmlFor={inputId}>
+        {label}
+        <input
+          defaultValue={query}
+          id={inputId}
+          maxLength={80}
+          name={queryName}
+          placeholder={placeholder}
+          type="search"
+        />
+      </label>
+      <div className="participant-search-actions">
+        <button className="secondary-action" type="submit">
+          <FaIcon name="search" />
+          검색
+        </button>
+        {query ? (
+          <a className="secondary-action" href={buildClearSearchHref(activeTab, otherQuery)}>
+            초기화
+          </a>
+        ) : null}
+      </div>
+      <p className="participant-search-meta">
+        {query ? `"${query}" 검색 결과 ${resultCount}명` : `최근 ${targetLabel} ${resultCount}명을 표시합니다.`}
+      </p>
+    </form>
   );
 }
 

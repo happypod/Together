@@ -10,7 +10,7 @@ type AppShellProps = {
   currentHref?: string;
 };
 
-export function AppShell({ children, currentHref = "/" }: AppShellProps) {
+export function AppShell({ children, currentHref = "/admin" }: AppShellProps) {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -31,12 +31,19 @@ export function AppShell({ children, currentHref = "/" }: AppShellProps) {
             </div>
           </div>
           <div className="topbar-side">
+            <Link
+              aria-current={currentHref === "/" ? "page" : undefined}
+              aria-label="메인으로 이동"
+              className="topbar-main-link"
+              href="/"
+              prefetch
+              title="메인으로 이동"
+            >
+              <FaIcon name="home" />
+              <span className="topbar-main-link-text">메인</span>
+            </Link>
             <AppChrome currentHref={currentHref} />
             <AuthActions />
-            <div className="status-pill" aria-label="시스템 상태">
-              <span aria-hidden="true" />
-              운영 준비
-            </div>
           </div>
         </div>
         <nav className="nav-strip" aria-label="관리자 메뉴">

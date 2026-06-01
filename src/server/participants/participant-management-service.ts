@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { assertPermission, type AuthUser } from "@/domain/auth/permissions";
+import { assertPermission, hasPermission, type AuthUser } from "@/domain/auth/permissions";
 import {
   LINKER_STATUS_LABELS,
   LINKER_STATUSES,
@@ -13,6 +13,13 @@ import { hashPassword } from "@/server/auth/password";
 import { prisma } from "@/server/db/prisma";
 
 export type ParticipantKind = "resident" | "linker";
+export type ParticipantManagementTab = "residents" | "linkers";
+
+export type ParticipantManagementFilters = {
+  linkerQuery?: string;
+  residentQuery?: string;
+  tab?: string;
+};
 
 export type ParticipantActivityItem = {
   date: string;
@@ -72,6 +79,11 @@ export type ParticipantManagementView = {
   canManage: boolean;
   canManageLinkers: boolean;
   canManageResidents: boolean;
+  filters: {
+    linkerQuery: string;
+    residentQuery: string;
+    tab: ParticipantManagementTab;
+  };
   linkerRows: LinkerUserStatusRow[];
   residentRows: ResidentUserStatusRow[];
   summary: {
@@ -219,6 +231,57 @@ function assertCanManageParticipantKind(user: AuthUser, kind: ParticipantKind) {
 
 function cleanText(value: unknown, maxLength: number) {
   return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function normalizeFilters(filters: ParticipantManagementFilters = {}) {
+  const tab: ParticipantManagementTab = filters.tab === "linkers" ? "linkers" : "residents";
+  return {
+    linkerQuery: cleanText(filters.linkerQuery, 80),
+    residentQuery: cleanText(filters.residentQuery, 80),
+    tab,
+  };
+}
+
+function buildResidentWhere(query: string): Prisma.ResidentWhereInput {
+  const where: Prisma.ResidentWhereInput = { deletedAt: null };
+  if (!query) {
+    return where;
+  }
+
+  where.OR = [
+    { name: { contains: query, mode: "insensitive" } },
+    { villageName: { contains: query, mode: "insensitive" } },
+    { phone: { contains: query, mode: "insensitive" } },
+    { guardianPhone: { contains: query, mode: "insensitive" } },
+    { memo: { contains: query, mode: "insensitive" } },
+    { user: { is: { email: { contains: query, mode: "insensitive" } } } },
+  ];
+  return where;
+}
+
+function buildLinkerWhere(query: string): Prisma.LinkerWhereInput {
+  const where: Prisma.LinkerWhereInput = { deletedAt: null };
+  if (!query) {
+    return where;
+  }
+
+  where.OR = [
+    { name: { contains: query, mode: "insensitive" } },
+    { villageName: { contains: query, mode: "insensitive" } },
+    { phone: { contains: query, mode: "insensitive" } },
+    { desiredJobField: { contains: query, mode: "insensitive" } },
+    { incidentComplaintHistory: { contains: query, mode: "insensitive" } },
+    { user: { is: { email: { contains: query, mode: "insensitive" } } } },
+  ];
+  return where;
+}
+
+function matchesSearch(query: string, values: (string | null | undefined)[]) {
+  if (!query) {
+    return true;
+  }
+  const normalizedQuery = query.toLowerCase();
+  return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
 }
 
 function optionalText(value: unknown, maxLength: number) {
@@ -425,14 +488,22 @@ function toLinkerRow(linker: LinkerRecord, notices: ParticipantNoticeItem[]): Li
   };
 }
 
-export async function getParticipantManagementView(user: AuthUser): Promise<ParticipantManagementView> {
-  assertPermission(user, "resident:read");
+export async function getParticipantManagementView(
+  user: AuthUser,
+  filters: ParticipantManagementFilters = {},
+): Promise<ParticipantManagementView> {
+  const normalizedFilters = normalizeFilters(filters);
+  const canReadResidents = hasPermission(user, "resident:read") || hasPermission(user, "user:manage");
+  const canReadLinkers = hasPermission(user, "linker:read") || hasPermission(user, "user:manage");
+  if (!canReadResidents && !canReadLinkers) {
+    assertPermission(user, "resident:read");
+  }
 
   const [residents, linkers] = await Promise.all([
-    prisma.resident.findMany({
-      where: { deletedAt: null },
+    canReadResidents ? prisma.resident.findMany({
+      where: buildResidentWhere(normalizedFilters.residentQuery),
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
-      take: 40,
+      take: normalizedFilters.residentQuery ? 80 : 40,
       include: {
         user: {
           select: {
@@ -477,11 +548,11 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
           },
         },
       },
-    }),
-    prisma.linker.findMany({
-      where: { deletedAt: null },
+    }) : Promise.resolve([]),
+    canReadLinkers ? prisma.linker.findMany({
+      where: buildLinkerWhere(normalizedFilters.linkerQuery),
       orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
-      take: 40,
+      take: normalizedFilters.linkerQuery ? 80 : 40,
       include: {
         user: {
           select: {
@@ -511,7 +582,7 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
           },
         },
       },
-    }),
+    }) : Promise.resolve([]),
   ]);
 
   const residentIds = residents.map((resident) => resident.id);
@@ -544,6 +615,7 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
     canManage: hasParticipantManagePermission(user),
     canManageLinkers: hasLinkerManagePermission(user),
     canManageResidents: hasResidentManagePermission(user),
+    filters: normalizedFilters,
     residentRows,
     linkerRows,
     summary: {
@@ -557,7 +629,11 @@ export async function getParticipantManagementView(user: AuthUser): Promise<Part
   };
 }
 
-export function createPreviewParticipantManagementView(user: AuthUser | null = null): ParticipantManagementView {
+export function createPreviewParticipantManagementView(
+  user: AuthUser | null = null,
+  filters: ParticipantManagementFilters = {},
+): ParticipantManagementView {
+  const normalizedFilters = normalizeFilters(filters);
   const residentRows: ResidentUserStatusRow[] = [
     {
       id: "00000000-0000-4000-8000-000000010001",
@@ -614,18 +690,45 @@ export function createPreviewParticipantManagementView(user: AuthUser | null = n
       recentNotices: [],
     },
   ];
+  const filteredResidentRows = residentRows.filter((row) =>
+    matchesSearch(normalizedFilters.residentQuery, [
+      row.name,
+      row.villageName,
+      row.phone,
+      row.phoneMasked,
+      row.guardianPhone,
+      row.accountEmail,
+      row.memo,
+    ]),
+  );
+  const filteredLinkerRows = linkerRows.filter((row) =>
+    matchesSearch(normalizedFilters.linkerQuery, [
+      row.name,
+      row.villageName,
+      row.phone,
+      row.phoneMasked,
+      row.accountEmail,
+      row.desiredJobField,
+      row.statusLabel,
+    ]),
+  );
 
   return {
     canManage: Boolean(user && hasParticipantManagePermission(user)),
     canManageLinkers: Boolean(user && hasLinkerManagePermission(user)),
     canManageResidents: Boolean(user && hasResidentManagePermission(user)),
-    residentRows,
-    linkerRows,
+    filters: normalizedFilters,
+    residentRows: filteredResidentRows,
+    linkerRows: filteredLinkerRows,
     summary: {
-      residentCount: residentRows.length,
-      linkerCount: linkerRows.length,
-      linkedAccountCount: 2,
-      noticeCount: 1,
+      residentCount: filteredResidentRows.length,
+      linkerCount: filteredLinkerRows.length,
+      linkedAccountCount:
+        filteredResidentRows.filter((row) => row.accountEmail).length +
+        filteredLinkerRows.filter((row) => row.accountEmail).length,
+      noticeCount:
+        filteredResidentRows.reduce((sum, row) => sum + row.recentNotices.length, 0) +
+        filteredLinkerRows.reduce((sum, row) => sum + row.recentNotices.length, 0),
     },
   };
 }

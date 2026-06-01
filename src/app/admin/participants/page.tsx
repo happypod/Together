@@ -6,11 +6,30 @@ import { getCurrentUser } from "@/server/auth/session";
 import {
   createPreviewParticipantManagementView,
   getParticipantManagementView,
+  type ParticipantManagementFilters,
 } from "@/server/participants/participant-management-service";
 
 export const dynamic = "force-dynamic";
 
-export default async function ParticipantsPage() {
+type ParticipantsPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+async function normalizeFilters(searchParams?: ParticipantsPageProps["searchParams"]) {
+  const params = (await searchParams) ?? {};
+  return {
+    linkerQuery: firstValue(params.linkerQuery) ?? "",
+    residentQuery: firstValue(params.residentQuery) ?? "",
+    tab: firstValue(params.tab) ?? "",
+  } satisfies ParticipantManagementFilters;
+}
+
+export default async function ParticipantsPage({ searchParams }: ParticipantsPageProps) {
+  const filters = await normalizeFilters(searchParams);
   let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
   try {
     user = await getCurrentUser();
@@ -33,17 +52,17 @@ export default async function ParticipantsPage() {
     );
   }
 
-  let view = createPreviewParticipantManagementView(user);
+  let view = createPreviewParticipantManagementView(user, filters);
   let notice = user
     ? "미리보기 사용자현황 데이터가 표시됩니다."
     : "로그인 후 주민·동행링커 기본 정보, 비밀번호, 개인 공지를 관리할 수 있습니다.";
 
   if (user && canRead) {
     try {
-      view = await getParticipantManagementView(user);
+      view = await getParticipantManagementView(user, filters);
       notice = "";
     } catch {
-      view = createPreviewParticipantManagementView(user);
+      view = createPreviewParticipantManagementView(user, filters);
       notice = "데이터베이스 연결 전 미리보기 사용자현황 데이터가 표시됩니다.";
     }
   }
